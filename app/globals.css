@@ -1,0 +1,159 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Backgrounds */
+  --bg-primary: #FAFAF8;
+  --bg-secondary: #F5F0E8;
+  --bg-card: #FFFFFF;
+  --bg-warm: #FFF8F0;
+
+  /* Orange accent */
+  --orange: #FF6B35;
+  --orange-light: #FF8C5A;
+  --orange-dark: #E55A26;
+  --orange-bg: #FFF0E8;
+
+  /* Green accent */
+  --green: #2D6A4F;
+  --green-light: #40916C;
+  --green-dark: #1B4332;
+  --green-bg: #E8F5EE;
+
+  /* Text */
+  --text-primary: #1A1A1A;
+  --text-secondary: #4A4A4A;
+  --text-muted: #888888;
+
+  /* Borders */
+  --border: rgba(0, 0, 0, 0.08);
+  --border-warm: rgba(255, 107, 53, 0.2);
+
+  /* Functional */
+  --success: #2D6A4F;
+  --error: #E53E3E;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #FAFAF8;
+  color: #1A1A1A;
+  font-family: var(--font-jakarta), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Selection */
+::selection {
+  background: rgba(255, 107, 53, 0.15);
+  color: #1A1A1A;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F5F0E8;
+}
+::-webkit-scrollbar-thumb {
+  background: #FF6B35;
+  border-radius: 3px;
+}
+
+/* Warm card shadow */
+.shadow-card {
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+}
+
+.shadow-warm {
+  box-shadow: 0 8px 40px rgba(255, 107, 53, 0.15);
+}
+
+.shadow-hover {
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
+}
+
+/* Orange gradient text */
+.text-orange-gradient {
+  background: linear-gradient(135deg, #FF8C5A 0%, #FF6B35 60%, #E55A26 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Orange gradient bg */
+.bg-orange-gradient {
+  background: linear-gradient(135deg, #FF8C5A 0%, #FF6B35 100%);
+}
+
+/* Green gradient bg */
+.bg-green-gradient {
+  background: linear-gradient(135deg, #40916C 0%, #2D6A4F 100%);
+}
+
+/* Wavy divider */
+.wave-divider {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Soft pill */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 1rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+/* Image hover zoom wrapper */
+.img-zoom-wrap {
+  overflow: hidden;
+}
+.img-zoom-wrap img,
+.img-zoom-wrap > div {
+  transition: transform 0.5s ease;
+}
+.img-zoom-wrap:hover img,
+.img-zoom-wrap:hover > div {
+  transform: scale(1.04);
+}
+
+/* Paw print decoration (CSS) */
+.paw-decor::before {
+  content: '🐾';
+  position: absolute;
+  font-size: 1.5rem;
+  opacity: 0.08;
+  pointer-events: none;
+}
+
+/* Skeleton shimmer */
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    #F5F0E8 0%,
+    #EDE8E0 50%,
+    #F5F0E8 100%
+  );
+  background-size: 400px 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}

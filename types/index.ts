@@ -1,0 +1,44 @@
+export interface Product {
+  id: string
+  name: string
+  price: number
+  originalPrice?: number
+  image: string | null
+  images?: string[]
+  category: 'perros' | 'gatos'
+  subcategory: string
+  badge?: 'nuevo' | 'oferta' | 'mas-vendido'
+  rating: number
+  reviews: number
+  description: string
+  features?: string[]
+  aliexpressId?: string
+  stock?: number
+}
+
+export interface CartItem extends Product {
+  quantity: number
+}
+
+export interface Testimonial {
+  id: string
+  name: string
+  pet: string
+  petType: 'perro' | 'gato'
+  text: string
+  rating: number
+  avatar: string
+  location: string
+}
+
+export interface Category {
+  id: string
+  name: string
+  slug: string
+  image: string
+  description: string
+  count: number
+}
+
+export type FilterCategory = 'todos' | 'perros' | 'gatos'
+export type SortOption = 'relevancia' | 'precio-asc' | 'precio-desc' | 'valoracion'

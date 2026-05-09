@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+Disallow: /admin/
+Disallow: /api/
+Disallow: /mi-cuenta/
+
+Sitemap: https://zarpitas.es/sitemap.xml
