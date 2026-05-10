@@ -1,8 +1,59 @@
 import { createHmac } from 'crypto'
+import { createServiceClient } from '@/lib/supabase/server'
 
 const BASE_URL = 'https://api-sg.aliexpress.com/sync'
 const APP_KEY = process.env.ALIEXPRESS_APP_KEY!
 const APP_SECRET = (process.env.ALIEXPRESS_APP_SECRET ?? '').trim()
+
+// ─── Token ────────────────────────────────────────────────────────────────────
+
+export async function getAccessToken(): Promise<string | null> {
+  try {
+    const db = createServiceClient()
+    const { data } = await db
+      .from('aliexpress_tokens')
+      .select('access_token, refresh_token, expires_at')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+
+    if (!data) return null
+
+    const isExpired = new Date(data.expires_at) <= new Date()
+    if (isExpired && data.refresh_token) {
+      // Auto-refresh
+      const body = new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: data.refresh_token,
+        client_id: process.env.ALIEXPRESS_APP_KEY ?? '533884',
+        client_secret: process.env.ALIEXPRESS_APP_SECRET ?? '',
+      })
+      const res = await fetch('https://oauth.aliexpress.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString(),
+      })
+      if (res.ok) {
+        const refreshed = await res.json() as { access_token: string; refresh_token?: string; expire_time?: number }
+        if (refreshed.access_token) {
+          await db.from('aliexpress_tokens').insert({
+            access_token: refreshed.access_token,
+            refresh_token: refreshed.refresh_token ?? data.refresh_token,
+            expires_at: refreshed.expire_time
+              ? new Date(refreshed.expire_time).toISOString()
+              : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          })
+          return refreshed.access_token
+        }
+      }
+      return null
+    }
+
+    return isExpired ? null : data.access_token
+  } catch {
+    return null
+  }
+}
 
 // ─── Signature ────────────────────────────────────────────────────────────────
 
@@ -20,6 +71,8 @@ async function callAPI<T = unknown>(
   method: string,
   params: Record<string, string>
 ): Promise<T> {
+  const accessToken = await getAccessToken()
+
   const base: Record<string, string> = {
     app_key: APP_KEY,
     timestamp: Date.now().toString(),
@@ -27,6 +80,7 @@ async function callAPI<T = unknown>(
     format: 'json',
     v: '2.0',
     method,
+    ...(accessToken ? { session: accessToken } : {}),
     ...params,
   }
   base.sign = generateSignature(base, APP_SECRET)
