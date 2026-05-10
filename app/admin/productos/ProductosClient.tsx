@@ -65,8 +65,8 @@ interface ImportModalProps {
 
 function ImportModal({ aliexpressId, onClose, onSaved }: ImportModalProps) {
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [allImages, setAllImages] = useState<string[]>([])
 
   const [name, setName] = useState('')
@@ -84,9 +84,7 @@ function ImportModal({ aliexpressId, onClose, onSaved }: ImportModalProps) {
     fetch(`/api/aliexpress/product?id=${aliexpressId}`)
       .then((r) => r.json())
       .then((data) => {
-        if (data.error) {
-          setError('No se pudieron cargar los datos automáticamente. Rellena el formulario manualmente.')
-        } else {
+        if (!data.error) {
           if (data.name) setName(data.name.slice(0, 80))
           if (data.price) setCostPrice(String(data.price))
           if (data.images?.length) {
@@ -96,7 +94,7 @@ function ImportModal({ aliexpressId, onClose, onSaved }: ImportModalProps) {
           if (data.description) setDescription(data.description.slice(0, 500))
         }
       })
-      .catch(() => setError('No se pudieron cargar los datos automáticamente. Rellena el formulario manualmente.'))
+      .catch(() => {/* silent - user fills manually */})
       .finally(() => setLoading(false))
   })
 
@@ -110,7 +108,7 @@ function ImportModal({ aliexpressId, onClose, onSaved }: ImportModalProps) {
   async function handleSave() {
     if (!name || !salePrice || !category) return
     setSaving(true)
-    setError(null)
+    setSaveError(null)
     try {
       const id = slugify(name)
       const images = imageUrl.trim() ? [imageUrl.trim()] : []
@@ -132,7 +130,7 @@ function ImportModal({ aliexpressId, onClose, onSaved }: ImportModalProps) {
       })
       onSaved()
     } catch (e) {
-      setError(String(e))
+      setSaveError(String(e))
       setSaving(false)
     }
   }
@@ -159,13 +157,6 @@ function ImportModal({ aliexpressId, onClose, onSaved }: ImportModalProps) {
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
-          {error && (
-            <div className="flex items-start gap-2 bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3 text-yellow-400 text-xs">
-              <AlertCircle size={14} className="shrink-0 mt-0.5" />
-              {error}
-            </div>
-          )}
-
           {loading && (
             <div className="flex items-center gap-2 text-zinc-400 text-xs bg-zinc-800 rounded-xl p-3">
               <RefreshCw size={13} className="animate-spin text-orange" />
@@ -344,9 +335,12 @@ function ImportModal({ aliexpressId, onClose, onSaved }: ImportModalProps) {
         </div>
 
         <div className="px-6 py-4 border-t border-zinc-800 flex items-center justify-between gap-3">
-          <button onClick={onClose} className="text-zinc-400 hover:text-white text-sm transition-colors">
-            Cancelar
-          </button>
+          <div className="flex items-center gap-3">
+            <button onClick={onClose} className="text-zinc-400 hover:text-white text-sm transition-colors">
+              Cancelar
+            </button>
+            {saveError && <span className="text-red-400 text-xs">{saveError}</span>}
+          </div>
           <button
             onClick={handleSave}
             disabled={!name || !salePrice || saving}
@@ -360,6 +354,7 @@ function ImportModal({ aliexpressId, onClose, onSaved }: ImportModalProps) {
     </div>
   )
 }
+
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 

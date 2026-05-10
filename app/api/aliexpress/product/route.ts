@@ -10,28 +10,19 @@ export interface ScrapedProduct {
   description: string
 }
 
-async function scrapeAliExpressProduct(productId: string): Promise<ScrapedProduct> {
-  const url = `https://www.aliexpress.com/item/${productId}.html`
+function parseRunParams(html: string): ScrapedProduct | null {
+  // Try window.runParams
+  const patterns = [
+    /window\.runParams\s*=\s*(\{[\s\S]*?\});\s*(?:window|var\s|<\/script>)/,
+    /"data"\s*:\s*(\{[\s\S]*?"productInfoComponent"[\s\S]*?\})\s*,\s*"[\w]+"\s*:/,
+  ]
 
-  const res = await fetch(url, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-      'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
-      'Cache-Control': 'no-cache',
-    },
-  })
-
-  if (!res.ok) throw new Error(`AliExpress page returned ${res.status}`)
-
-  const html = await res.text()
-
-  // Try to extract window.runParams JSON blob
-  const runParamsMatch = html.match(/window\.runParams\s*=\s*(\{[\s\S]*?\});\s*(?:window|var|<\/script>)/)
-  if (runParamsMatch) {
+  for (const pattern of patterns) {
+    const match = html.match(pattern)
+    if (!match) continue
     try {
-      const data = JSON.parse(runParamsMatch[1])
-      const d = data?.data ?? data
+      const raw = JSON.parse(match[1])
+      const d = raw?.data ?? raw
 
       const name: string =
         d?.productInfoComponent?.subject ??
@@ -44,50 +35,91 @@ async function scrapeAliExpressProduct(productId: string): Promise<ScrapedProduc
         priceComp?.discountPrice?.minActivityAmount?.value ??
         priceComp?.originalPrice?.minAmount?.value ??
         priceComp?.salePriceString ??
-        '0'
-      const origStr: string =
-        priceComp?.originalPrice?.minAmount?.value ??
-        priceComp?.originalPriceString ??
         ''
 
       const imageComp = d?.imageComponent ?? d?.image ?? {}
-      const images: string[] = (
+      const rawImages: string[] =
         imageComp?.imagePathList ??
         imageComp?.images ??
         d?.imagePathList ??
         []
-      ).map((img: string) => (img.startsWith('//') ? `https:${img}` : img))
+
+      const images = rawImages.map((img: string) =>
+        img.startsWith('//') ? `https:${img}` : img
+      )
+
+      if (!name && !priceStr && !images.length) continue
 
       return {
-        id: productId,
+        id: '',
         name,
-        price: parseFloat(priceStr) || 0,
-        originalPrice: origStr ? parseFloat(origStr) : null,
+        price: priceStr ? parseFloat(priceStr) : 0,
+        originalPrice: null,
         images,
-        description: d?.productDescComponent?.descriptionUrl ?? '',
+        description: '',
       }
     } catch {
-      // fall through to next strategy
+      continue
+    }
+  }
+  return null
+}
+
+async function tryFetch(url: string, extraHeaders?: Record<string, string>): Promise<string> {
+  const res = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.144 Mobile Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'es-ES,es;q=0.9',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'none',
+      ...extraHeaders,
+    },
+    redirect: 'follow',
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.text()
+}
+
+async function scrapeAliExpressProduct(productId: string): Promise<ScrapedProduct> {
+  const urls = [
+    `https://m.aliexpress.com/item/${productId}.html`,
+    `https://www.aliexpress.com/item/${productId}.html`,
+    `https://es.aliexpress.com/item/${productId}.html`,
+  ]
+
+  for (const url of urls) {
+    try {
+      const html = await tryFetch(url)
+      const parsed = parseRunParams(html)
+      if (parsed) {
+        parsed.id = productId
+        return parsed
+      }
+
+      // Fallback: og tags
+      const ogTitle = html.match(/<meta[^>]+property="og:title"[^>]+content="([^"]+)"/)?.[1] ?? ''
+      const ogImage = html.match(/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/)?.[1] ?? ''
+      if (ogTitle) {
+        return {
+          id: productId,
+          name: ogTitle,
+          price: 0,
+          originalPrice: null,
+          images: ogImage ? [ogImage] : [],
+          description: '',
+        }
+      }
+    } catch {
+      continue
     }
   }
 
-  // Fallback: extract from meta tags
-  const ogTitle = html.match(/<meta[^>]+property="og:title"[^>]+content="([^"]+)"/)?.[1] ?? ''
-  const ogImage = html.match(/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/)?.[1] ?? ''
-  const priceMatch = html.match(/"price"\s*:\s*"?([\d.]+)"?/) ??
-    html.match(/class="[^"]*price[^"]*"[^>]*>\s*(?:€|US\$|EUR)?\s*([\d.,]+)/)
-  const price = priceMatch ? parseFloat(priceMatch[1].replace(',', '.')) : 0
-
-  if (!ogTitle) throw new Error('No se pudo extraer datos del producto. Es posible que AliExpress haya bloqueado la solicitud.')
-
-  return {
-    id: productId,
-    name: ogTitle,
-    price,
-    originalPrice: null,
-    images: ogImage ? [ogImage] : [],
-    description: '',
-  }
+  throw new Error('BLOCKED')
 }
 
 export async function GET(req: NextRequest) {
