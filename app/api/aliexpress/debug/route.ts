@@ -12,16 +12,15 @@ export async function GET() {
     sign_method: 'hmac-sha256',
     format: 'json',
     v: '2.0',
-    method: 'aliexpress.ds.text.search',
+    method: 'aliexpress.affiliate.product.query',
     keywords: 'collar perro',
-    local_country: 'ES',
-    local_language: 'es',
-    countryCode: 'ES',
-    currency: 'EUR',
-    local: 'es',
-    sort: 'LAST_VOLUME_DESC',
-    page_index: '1',
+    target_currency: 'EUR',
+    target_language: 'ES',
+    country: 'ES',
+    sort: 'SALE_PRICE_ASC',
+    page_no: '1',
     page_size: '5',
+    tracking_id: 'default',
   }
   params.sign = generateSignature(params, APP_SECRET)
 
