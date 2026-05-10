@@ -1,8 +1,11 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
 const FROM = 'Zarpitas <hola@zarpitas.es>'
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? 'hola@zarpitas.es'
+
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY ?? '')
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -27,7 +30,7 @@ export interface OrderEmailData {
 
 export async function sendOrderConfirmation(order: OrderEmailData): Promise<void> {
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: FROM,
       to: order.customer_email,
       subject: `¡Pedido confirmado! #${sid(order.id)} — Zarpitas`,
@@ -40,7 +43,7 @@ export async function sendOrderConfirmation(order: OrderEmailData): Promise<void
 
 export async function sendAdminNewOrder(order: OrderEmailData): Promise<void> {
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: FROM,
       to: ADMIN_EMAIL,
       subject: `🛍️ Nuevo pedido #${sid(order.id)} — ${fmt(order.total)}`,
@@ -53,7 +56,7 @@ export async function sendAdminNewOrder(order: OrderEmailData): Promise<void> {
 
 export async function sendShippingNotification(order: OrderEmailData): Promise<void> {
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: FROM,
       to: order.customer_email,
       subject: `🚀 Tu pedido #${sid(order.id)} está en camino — Zarpitas`,
@@ -66,7 +69,7 @@ export async function sendShippingNotification(order: OrderEmailData): Promise<v
 
 export async function sendWelcomeEmail(email: string): Promise<void> {
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: FROM,
       to: email,
       subject: '🐾 Tu 10% de descuento te espera — Zarpitas',
