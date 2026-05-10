@@ -65,7 +65,9 @@ interface ImportModalProps {
 
 function ImportModal({ aliexpressId, onClose, onSaved }: ImportModalProps) {
   const [saving, setSaving] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [allImages, setAllImages] = useState<string[]>([])
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -76,6 +78,27 @@ function ImportModal({ aliexpressId, onClose, onSaved }: ImportModalProps) {
   const [subcategory, setSubcategory] = useState('')
   const [badge, setBadge] = useState<'nuevo' | 'oferta' | 'mas-vendido' | ''>('')
   const [stock, setStock] = useState('99')
+
+  // Auto-fetch product data on mount
+  useState(() => {
+    fetch(`/api/aliexpress/product?id=${aliexpressId}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error) {
+          setError('No se pudieron cargar los datos automáticamente. Rellena el formulario manualmente.')
+        } else {
+          if (data.name) setName(data.name.slice(0, 80))
+          if (data.price) setCostPrice(String(data.price))
+          if (data.images?.length) {
+            setAllImages(data.images)
+            setImageUrl(data.images[0])
+          }
+          if (data.description) setDescription(data.description.slice(0, 500))
+        }
+      })
+      .catch(() => setError('No se pudieron cargar los datos automáticamente. Rellena el formulario manualmente.'))
+      .finally(() => setLoading(false))
+  })
 
   const costNum = parseFloat(costPrice) || 0
   const saleNum = parseFloat(salePrice) || 0
@@ -137,16 +160,44 @@ function ImportModal({ aliexpressId, onClose, onSaved }: ImportModalProps) {
 
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {error && (
-            <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-xl p-3 text-red-400 text-xs">
+            <div className="flex items-start gap-2 bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3 text-yellow-400 text-xs">
               <AlertCircle size={14} className="shrink-0 mt-0.5" />
               {error}
             </div>
           )}
 
-          <div className="p-3 bg-zinc-800/60 border border-zinc-700 rounded-xl text-xs text-zinc-400 flex items-start gap-2">
-            <AlertCircle size={13} className="shrink-0 mt-0.5 text-orange" />
-            Abre el enlace de AliExpress arriba, copia los datos del producto y rellena el formulario.
-          </div>
+          {loading && (
+            <div className="flex items-center gap-2 text-zinc-400 text-xs bg-zinc-800 rounded-xl p-3">
+              <RefreshCw size={13} className="animate-spin text-orange" />
+              Cargando datos del producto desde AliExpress...
+            </div>
+          )}
+
+          {/* Image selector when multiple images available */}
+          {allImages.length > 1 && (
+            <div>
+              <p className="text-zinc-400 text-xs font-bold uppercase tracking-wider mb-2">Seleccionar imagen principal</p>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {allImages.slice(0, 8).map((img, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setImageUrl(img)}
+                    className={`relative w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 border-2 transition-colors ${
+                      imageUrl === img ? 'border-orange' : 'border-zinc-700 hover:border-zinc-500'
+                    }`}
+                  >
+                    <Image src={img} alt="" fill sizes="64px" className="object-cover" unoptimized />
+                    {imageUrl === img && (
+                      <div className="absolute inset-0 bg-orange/20 flex items-center justify-center">
+                        <Check size={14} className="text-white" />
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="block text-zinc-400 text-xs font-bold uppercase tracking-wider mb-1.5">
