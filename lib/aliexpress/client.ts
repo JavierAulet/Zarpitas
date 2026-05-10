@@ -71,8 +71,6 @@ async function callAPI<T = unknown>(
   method: string,
   params: Record<string, string>
 ): Promise<T> {
-  const accessToken = await getAccessToken()
-
   const base: Record<string, string> = {
     app_key: APP_KEY,
     timestamp: Date.now().toString(),
@@ -80,7 +78,6 @@ async function callAPI<T = unknown>(
     format: 'json',
     v: '2.0',
     method,
-    ...(accessToken ? { session: accessToken } : {}),
     ...params,
   }
   base.sign = generateSignature(base, APP_SECRET)
