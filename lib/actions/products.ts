@@ -49,9 +49,29 @@ export async function getActiveProduct(id: string): Promise<Product | null> {
   return rowToProduct(data)
 }
 
+// Columns that may not exist yet if migrations haven't run
+const OPTIONAL_COLUMNS = ['sku'] as const
+type OptionalColumn = typeof OPTIONAL_COLUMNS[number]
+
+function stripOptional<T extends Record<string, unknown>>(obj: T): Omit<T, OptionalColumn> {
+  const copy = { ...obj }
+  for (const col of OPTIONAL_COLUMNS) delete (copy as Record<string, unknown>)[col]
+  return copy as Omit<T, OptionalColumn>
+}
+
+// Returns true if the error is a PostgREST "column does not exist" for an optional column
+function isMissingColumnError(msg: string): boolean {
+  return OPTIONAL_COLUMNS.some((col) => msg.includes(`"${col}"`) || msg.includes(`'${col}'`) || msg.includes(` ${col} `))
+}
+
 export async function createProduct(product: ProductInsert) {
   const db = createServerClient()
-  const { error } = await db.from('products').insert(product)
+  let { error } = await db.from('products').insert(product)
+  if (error && isMissingColumnError(error.message)) {
+    // Migration not run yet — retry without optional columns
+    const { error: e2 } = await db.from('products').insert(stripOptional(product))
+    error = e2
+  }
   if (error) throw new Error(error.message)
   revalidatePath('/admin/productos')
   revalidatePath('/productos')
@@ -59,10 +79,13 @@ export async function createProduct(product: ProductInsert) {
 
 export async function updateProduct(id: string, product: ProductUpdate) {
   const db = createServerClient()
-  const { error } = await db
-    .from('products')
-    .update({ ...product, updated_at: new Date().toISOString() })
-    .eq('id', id)
+  const update = { ...product, updated_at: new Date().toISOString() }
+  let { error } = await db.from('products').update(update).eq('id', id)
+  if (error && isMissingColumnError(error.message)) {
+    // Migration not run yet — retry without optional columns
+    const { error: e2 } = await db.from('products').update(stripOptional(update)).eq('id', id)
+    error = e2
+  }
   if (error) throw new Error(error.message)
   revalidatePath('/admin/productos')
   revalidatePath('/productos')
