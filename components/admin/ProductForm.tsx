@@ -165,7 +165,8 @@ function MultiImageUploader({ productId, images, onChange }: MultiImageUploaderP
 
 export default function ProductForm({ mode, product }: Props) {
   const router = useRouter()
-  const [isPending, startTransition] = useTransition()
+  const [, startTransition] = useTransition()
+  const [isPending, setIsPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const [name, setName] = useState(product?.name ?? '')
@@ -199,9 +200,10 @@ export default function ProductForm({ mode, product }: Props) {
   const updateFeature = (i: number, v: string) => setFeatures((f) => f.map((x, j) => (j === i ? v : x)))
   const removeFeature = (i: number) => setFeatures((f) => f.filter((_, j) => j !== i))
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    setIsPending(true)
 
     const payload = {
       id: id.trim(),
@@ -221,18 +223,21 @@ export default function ProductForm({ mode, product }: Props) {
       active,
     }
 
-    startTransition(async () => {
-      try {
-        if (mode === 'create') {
-          await createProduct(payload)
-        } else {
-          await updateProduct(payload.id, payload)
-        }
-        router.push('/admin/productos')
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Error desconocido')
+    try {
+      if (mode === 'create') {
+        await createProduct(payload)
+      } else {
+        await updateProduct(payload.id, payload)
       }
-    })
+      startTransition(() => router.push('/admin/productos'))
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Error desconocido'
+      setError(msg.includes('sku') || msg.includes('column')
+        ? 'Falta ejecutar la migración SQL de SKU en Supabase. Ve a Supabase → SQL Editor y ejecuta el archivo supabase/migration_sku.sql'
+        : msg)
+    } finally {
+      setIsPending(false)
+    }
   }
 
   return (
