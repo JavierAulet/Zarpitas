@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
-  Search, X, Plus, RefreshCw, Check, AlertCircle, ExternalLink, Package, Link2,
+  Search, X, Plus, RefreshCw, Check, AlertCircle, ExternalLink, Package, Link2, Upload,
 } from 'lucide-react'
 import { createProduct } from '@/lib/actions/products'
 import ToggleActive from '@/components/admin/ToggleActive'
@@ -53,6 +53,67 @@ const STATUS_COLORS: Record<string, string> = {
   nuevo: 'bg-blue-500/15 text-blue-400',
   oferta: 'bg-red-500/15 text-red-400',
   'mas-vendido': 'bg-orange/15 text-orange',
+}
+
+// ─── Mini image uploader for modal ───────────────────────────────────────────
+
+function ProductImageUploadMini({ aliexpressId, value, onChange }: { aliexpressId: string; value: string; onChange: (url: string) => void }) {
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  async function handleFile(file: File) {
+    if (file.size > 5 * 1024 * 1024) { setUploadError('Máx. 5 MB'); return }
+    if (!file.type.startsWith('image/')) { setUploadError('Solo imágenes'); return }
+    setUploadError(null)
+    setUploading(true)
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('productId', aliexpressId || 'import')
+    const res = await fetch('/api/admin/upload', { method: 'POST', body: fd })
+    const json = await res.json()
+    if (res.ok && json.url) onChange(json.url)
+    else setUploadError(json.error ?? 'Error al subir')
+    setUploading(false)
+  }
+
+  return (
+    <div className="space-y-2">
+      {value ? (
+        <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-zinc-800 group">
+          <Image src={value} alt="" fill sizes="400px" className="object-cover" unoptimized />
+          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+            <button type="button" onClick={() => inputRef.current?.click()} className="p-2 bg-orange rounded-lg text-white text-xs font-bold flex items-center gap-1">
+              <Upload size={12} /> Cambiar
+            </button>
+            <button type="button" onClick={() => onChange('')} className="p-2 bg-red-500 rounded-lg text-white">
+              <X size={12} />
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div
+          onClick={() => inputRef.current?.click()}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleFile(f) }}
+          className="border-2 border-dashed border-zinc-700 hover:border-orange/50 rounded-xl p-5 flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors"
+        >
+          {uploading
+            ? <RefreshCw size={20} className="text-orange animate-spin" />
+            : <><Upload size={18} className="text-zinc-500" /><p className="text-xs text-zinc-500">Subir desde dispositivo</p></>
+          }
+        </div>
+      )}
+      <input
+        placeholder="O pega una URL de imagen..."
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-orange/50 font-mono"
+      />
+      {uploadError && <p className="text-red-400 text-xs">{uploadError}</p>}
+      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }} />
+    </div>
+  )
 }
 
 // ─── Import Modal ─────────────────────────────────────────────────────────────
@@ -205,13 +266,13 @@ function ImportModal({ aliexpressId, onClose, onSaved }: ImportModalProps) {
 
           <div>
             <label className="block text-zinc-400 text-xs font-bold uppercase tracking-wider mb-1.5">
-              URL de imagen principal
+              Imagen principal
             </label>
-            <input
+            {/* Upload from device */}
+            <ProductImageUploadMini
+              aliexpressId={aliexpressId}
               value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="https://ae01.alicdn.com/kf/..."
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-orange/50"
+              onChange={setImageUrl}
             />
           </div>
 
