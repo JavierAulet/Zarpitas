@@ -247,6 +247,7 @@ export async function searchAliExpressProducts(
     local_country: options?.local_country ?? 'ES',
     local_language: options?.local_language ?? 'es',
     countryCode: options?.local_country ?? 'ES',
+    currency: 'EUR',
     sort: options?.sort ?? 'LAST_VOLUME_DESC',
     page_index: String(options?.page_index ?? 1),
     page_size: String(options?.page_size ?? 20),
