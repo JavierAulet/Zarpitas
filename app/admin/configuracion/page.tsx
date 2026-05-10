@@ -219,15 +219,24 @@ function AliExpressCard() {
   const [showSecret, setShowSecret] = useState(false)
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<'idle' | 'ok' | 'error'>('idle')
+  const [testError, setTestError] = useState('')
 
   async function testAE() {
     setTesting(true)
     setTestResult('idle')
+    setTestError('')
     try {
       const res = await fetch('/api/aliexpress/search?q=perro&size=1')
-      setTestResult(res.ok ? 'ok' : 'error')
-    } catch {
+      const data = await res.json()
+      if (res.ok) {
+        setTestResult('ok')
+      } else {
+        setTestResult('error')
+        setTestError(data?.error ?? `HTTP ${res.status}`)
+      }
+    } catch (e) {
       setTestResult('error')
+      setTestError(String(e))
     } finally {
       setTesting(false)
     }
@@ -275,7 +284,11 @@ function AliExpressCard() {
           Probar conexión
         </button>
         {testResult === 'ok' && <span className="text-green-400 text-xs flex items-center gap-1"><Check size={12} /> Conectado</span>}
-        {testResult === 'error' && <span className="text-red-400 text-xs flex items-center gap-1"><X size={12} /> Error de conexión</span>}
+        {testResult === 'error' && (
+          <span className="text-red-400 text-xs flex items-center gap-1 max-w-xs truncate" title={testError}>
+            <X size={12} /> {testError || 'Error de conexión'}
+          </span>
+        )}
       </div>
     </div>
   )
