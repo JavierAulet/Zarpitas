@@ -31,10 +31,6 @@ export default function Hero() {
       <div className="absolute top-16 right-0 w-[600px] h-[600px] bg-orange-50 rounded-full -translate-y-1/4 translate-x-1/4 pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-green-50 rounded-full translate-y-1/3 -translate-x-1/3 pointer-events-none" />
 
-      {/* Decorative paw prints */}
-      <div className="absolute top-32 left-16 text-5xl opacity-10 rotate-12 pointer-events-none select-none">🐾</div>
-      <div className="absolute bottom-24 right-24 text-4xl opacity-10 -rotate-12 pointer-events-none select-none">🐾</div>
-      <div className="absolute top-1/2 left-1/3 text-3xl opacity-5 rotate-45 pointer-events-none select-none">🐾</div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full py-12 md:py-0">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">

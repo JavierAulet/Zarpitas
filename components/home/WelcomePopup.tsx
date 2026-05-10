@@ -33,8 +33,15 @@ export default function WelcomePopup() {
     e.preventDefault()
     if (!email) return
     setSubmitting(true)
-    // Here you'd call your newsletter API — for now just mark as done
-    await new Promise((r) => setTimeout(r, 800))
+    try {
+      await fetch('/api/newsletter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+    } catch {
+      // silent
+    }
     localStorage.setItem(STORAGE_KEY, '1')
     setDone(true)
     setSubmitting(false)

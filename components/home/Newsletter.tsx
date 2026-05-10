@@ -13,7 +13,15 @@ export default function Newsletter() {
     e.preventDefault()
     if (!email) return
     setLoading(true)
-    await new Promise((r) => setTimeout(r, 900))
+    try {
+      await fetch('/api/newsletter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+    } catch {
+      // silent — user still sees success state
+    }
     setSubmitted(true)
     setLoading(false)
   }

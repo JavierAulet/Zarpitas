@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
 import { Nunito, Plus_Jakarta_Sans } from 'next/font/google'
+import { SpeedInsights } from '@vercel/speed-insights/next'
+import { Analytics } from '@vercel/analytics/react'
 import './globals.css'
 
 const nunito = Nunito({
@@ -21,8 +23,8 @@ const BASE_URL = 'https://zarpitas.es'
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
   title: {
-    default: 'Zarpitas.es — Tienda Premium para Mascotas en España',
-    template: '%s | Zarpitas.es',
+    default: 'Zarpitas — Tienda Premium para Mascotas en España',
+    template: '%s | Zarpitas',
   },
   description:
     'La tienda para mascotas hecha por personas que aman a los animales. Productos premium para perros y gatos con envío rápido en España. Devolución 30 días gratis.',
@@ -94,6 +96,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="bg-cream text-text-primary font-sans antialiased">
         {children}
+        <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   )

@@ -1,7 +1,8 @@
 'use server'
 import { revalidatePath } from 'next/cache'
 import { createServiceClient as createServerClient } from '@/lib/supabase/server'
-import type { OrderInsert, OrderStatus } from '@/lib/supabase/types'
+import { sendShippingNotification } from '@/lib/email'
+import type { OrderInsert, OrderStatus, OrderRow } from '@/lib/supabase/types'
 
 export async function saveOrder(order: OrderInsert) {
   const db = createServerClient()
@@ -31,5 +32,23 @@ export async function updateOrderStatus(id: string, status: OrderStatus) {
     .update({ status, updated_at: new Date().toISOString() })
     .eq('id', id)
   if (error) throw new Error(error.message)
+
+  if (status === 'shipped') {
+    const { data: order } = await db.from('orders').select('*').eq('id', id).single()
+    if (order) {
+      const o = order as OrderRow
+      void sendShippingNotification({
+        id: o.id,
+        customer_email: o.customer_email,
+        customer_name: o.customer_name,
+        shipping_address: o.shipping_address,
+        items: o.items,
+        subtotal: o.subtotal,
+        shipping: o.shipping,
+        total: o.total,
+      })
+    }
+  }
+
   revalidatePath('/admin/pedidos')
 }
