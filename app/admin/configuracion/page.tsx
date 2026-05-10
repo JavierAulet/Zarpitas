@@ -226,9 +226,9 @@ function AliExpressCard() {
     setTestResult('idle')
     setTestError('')
     try {
-      const res = await fetch('/api/aliexpress/search?q=perro&size=1')
+      const res = await fetch('/api/aliexpress/ping')
       const data = await res.json()
-      if (res.ok) {
+      if (res.ok && data?.ok) {
         setTestResult('ok')
       } else {
         setTestResult('error')
