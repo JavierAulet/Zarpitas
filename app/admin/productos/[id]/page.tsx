@@ -4,6 +4,8 @@ import { ArrowLeft } from 'lucide-react'
 import { getProduct } from '@/lib/actions/products'
 import ProductForm from '@/components/admin/ProductForm'
 
+export const dynamic = 'force-dynamic'
+
 interface Props {
   params: { id: string }
 }

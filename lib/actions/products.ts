@@ -88,6 +88,7 @@ export async function updateProduct(id: string, product: ProductUpdate) {
   }
   if (error) throw new Error(error.message)
   revalidatePath('/admin/productos')
+  revalidatePath(`/admin/productos/${id}`)
   revalidatePath('/productos')
   revalidatePath(`/productos/${id}`)
 }
