@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useRef } from 'react'
+import { useState, useEffect, useTransition, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -141,7 +141,7 @@ function ImportModal({ aliexpressId, onClose, onSaved }: ImportModalProps) {
   const [stock, setStock] = useState('99')
 
   // Auto-fetch product data on mount
-  useState(() => {
+  useEffect(() => {
     fetch(`/api/aliexpress/product?id=${aliexpressId}`)
       .then((r) => r.json())
       .then((data) => {
@@ -157,7 +157,7 @@ function ImportModal({ aliexpressId, onClose, onSaved }: ImportModalProps) {
       })
       .catch(() => {/* silent - user fills manually */})
       .finally(() => setLoading(false))
-  })
+  }, [aliexpressId])
 
   const costNum = parseFloat(costPrice) || 0
   const saleNum = parseFloat(salePrice) || 0
