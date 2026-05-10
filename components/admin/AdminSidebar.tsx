@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, Package, ShoppingBag, BarChart2, Settings, LogOut, ExternalLink } from 'lucide-react'
+import { LayoutDashboard, Package, ShoppingBag, BarChart2, Settings, LogOut, ExternalLink, BookOpen } from 'lucide-react'
 import { clsx } from 'clsx'
 
 const navItems = [
@@ -9,6 +9,7 @@ const navItems = [
   { href: '/admin/productos', label: 'Productos', icon: Package, exact: false },
   { href: '/admin/pedidos', label: 'Pedidos', icon: ShoppingBag, exact: false },
   { href: '/admin/analytics', label: 'Analítica', icon: BarChart2, exact: false },
+  { href: '/admin/blog', label: 'Blog', icon: BookOpen, exact: false },
   { href: '/admin/configuracion', label: 'Configuración', icon: Settings, exact: false },
 ]
 

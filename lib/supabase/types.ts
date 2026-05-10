@@ -98,6 +98,40 @@ export interface OrderRow {
   updated_at: string
 }
 
+export interface BlogPostRow {
+  id: string
+  title: string
+  slug: string
+  content: string
+  excerpt: string | null
+  featured_image_url: string | null
+  category: string
+  status: 'draft' | 'published'
+  meta_title: string | null
+  meta_description: string | null
+  read_time: number
+  views: number
+  related_product_ids: string[]
+  published_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface BlogPostInsert {
+  title: string
+  slug: string
+  content: string
+  excerpt?: string | null
+  featured_image_url?: string | null
+  category?: string
+  status?: 'draft' | 'published'
+  meta_title?: string | null
+  meta_description?: string | null
+  read_time?: number
+  related_product_ids?: string[]
+  published_at?: string | null
+}
+
 export interface OrderInsert {
   customer_email: string
   customer_name: string
