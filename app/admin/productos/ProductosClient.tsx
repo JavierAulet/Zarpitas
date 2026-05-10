@@ -590,7 +590,7 @@ export default function ProductosClient({ initialProducts }: Props) {
           <table className="w-full">
             <thead>
               <tr className="border-b border-zinc-800">
-                {['Producto', 'AliExpress ID', 'Coste', 'Precio venta', 'Margen', 'Stock', 'Categoría', 'Badge', 'Activo', ''].map((h) => (
+                {['Producto', 'SKU', 'AliExpress ID', 'Coste', 'Precio venta', 'Margen', 'Stock', 'Categoría', 'Badge', 'Activo', ''].map((h) => (
                   <th key={h} className="text-left text-zinc-500 text-xs font-bold uppercase tracking-wider px-5 py-3.5 whitespace-nowrap">
                     {h}
                   </th>
@@ -617,6 +617,13 @@ export default function ProductosClient({ initialProducts }: Props) {
                           <p className="text-zinc-600 text-xs font-mono">{product.id}</p>
                         </div>
                       </div>
+                    </td>
+                    <td className="px-5 py-4">
+                      {product.sku ? (
+                        <span className="text-xs font-mono font-bold text-zinc-300 bg-zinc-800 px-2 py-1 rounded-lg">{product.sku}</span>
+                      ) : (
+                        <span className="text-zinc-700 text-xs">—</span>
+                      )}
                     </td>
                     <td className="px-5 py-4">
                       {product.aliexpress_id ? (
@@ -702,7 +709,7 @@ export default function ProductosClient({ initialProducts }: Props) {
               })}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="text-center py-16">
+                  <td colSpan={11} className="text-center py-16">
                     <Package size={32} className="text-zinc-700 mx-auto mb-3" />
                     <p className="text-zinc-500 text-sm">No hay productos con esos filtros</p>
                   </td>

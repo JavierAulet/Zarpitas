@@ -1,5 +1,6 @@
 export interface ProductRow {
   id: string
+  sku: string | null
   name: string
   price: number
   original_price: number | null
@@ -22,6 +23,7 @@ export interface ProductRow {
 
 export interface ProductInsert {
   id: string
+  sku?: string | null
   name: string
   price: number
   original_price?: number | null

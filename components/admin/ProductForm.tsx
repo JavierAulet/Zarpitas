@@ -2,7 +2,7 @@
 import { useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { Plus, Trash2, Loader2, Upload, X, Star } from 'lucide-react'
+import { Plus, Trash2, Loader2, Upload, X, Star, RefreshCw } from 'lucide-react'
 import { createProduct, updateProduct } from '@/lib/actions/products'
 import type { ProductRow } from '@/lib/supabase/types'
 
@@ -18,6 +18,12 @@ const inputClass = 'w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py
 
 function slugify(text: string) {
   return text.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+}
+
+function generateSku(category: 'perros' | 'gatos'): string {
+  const prefix = category === 'perros' ? 'ZAR-DOG' : 'ZAR-CAT'
+  const num = Math.floor(Math.random() * 900) + 100
+  return `${prefix}-${num}`
 }
 
 // ─── Multi-image uploader ─────────────────────────────────────────────────────
@@ -171,6 +177,7 @@ export default function ProductForm({ mode, product }: Props) {
   const [badge, setBadge] = useState<string>(product?.badge ?? '')
   const [description, setDescription] = useState(product?.description ?? '')
   const [features, setFeatures] = useState<string[]>(product?.features ?? [''])
+  const [sku, setSku] = useState(product?.sku ?? '')
   const [aliexpressId, setAliexpressId] = useState(product?.aliexpress_id ?? '')
   const [stock, setStock] = useState(String(product?.stock ?? '0'))
   const [images, setImages] = useState<string[]>(
@@ -183,6 +190,11 @@ export default function ProductForm({ mode, product }: Props) {
     if (mode === 'create') setId(slugify(v))
   }
 
+  const handleCategoryChange = (v: 'perros' | 'gatos') => {
+    setCategory(v)
+    if (mode === 'create' && !sku) setSku(generateSku(v))
+  }
+
   const addFeature = () => setFeatures((f) => [...f, ''])
   const updateFeature = (i: number, v: string) => setFeatures((f) => f.map((x, j) => (j === i ? v : x)))
   const removeFeature = (i: number) => setFeatures((f) => f.filter((_, j) => j !== i))
@@ -193,6 +205,7 @@ export default function ProductForm({ mode, product }: Props) {
 
     const payload = {
       id: id.trim(),
+      sku: sku.trim() || null,
       name: name.trim(),
       category,
       subcategory: subcategory || null,
@@ -232,10 +245,32 @@ export default function ProductForm({ mode, product }: Props) {
             <label className={labelClass}>Nombre del producto</label>
             <input className={inputClass} value={name} onChange={(e) => handleNameChange(e.target.value)} placeholder="Collar GPS Premium para Perros" required />
           </div>
-          <div>
-            <label className={labelClass}>ID / Slug</label>
-            <input className={`${inputClass} font-mono`} value={id} onChange={(e) => setId(e.target.value)} placeholder="collar-gps-perro" required disabled={mode === 'edit'} />
-            {mode === 'edit' && <p className="text-zinc-600 text-xs mt-1">El ID no se puede cambiar</p>}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={labelClass}>ID / Slug</label>
+              <input className={`${inputClass} font-mono`} value={id} onChange={(e) => setId(e.target.value)} placeholder="collar-gps-perro" required disabled={mode === 'edit'} />
+              {mode === 'edit' && <p className="text-zinc-600 text-xs mt-1">El ID no se puede cambiar</p>}
+            </div>
+            <div>
+              <label className={labelClass}>SKU</label>
+              <div className="flex gap-2">
+                <input
+                  className={`${inputClass} font-mono`}
+                  value={sku}
+                  onChange={(e) => setSku(e.target.value.toUpperCase())}
+                  placeholder="ZAR-DOG-001"
+                />
+                <button
+                  type="button"
+                  onClick={() => setSku(generateSku(category))}
+                  title="Generar SKU automáticamente"
+                  className="p-2.5 rounded-xl bg-zinc-700 hover:bg-zinc-600 text-zinc-300 flex-shrink-0 transition-colors"
+                >
+                  <RefreshCw size={14} />
+                </button>
+              </div>
+              <p className="text-zinc-600 text-xs mt-1">Código de referencia interno</p>
+            </div>
           </div>
           <div>
             <label className={labelClass}>Descripción</label>
@@ -303,7 +338,7 @@ export default function ProductForm({ mode, product }: Props) {
           <h2 className="text-white font-bold">Categoría</h2>
           <div>
             <label className={labelClass}>Categoría</label>
-            <select className={inputClass} value={category} onChange={(e) => setCategory(e.target.value as 'perros' | 'gatos')}>
+            <select className={inputClass} value={category} onChange={(e) => handleCategoryChange(e.target.value as 'perros' | 'gatos')}>
               <option value="perros">🐶 Perros</option>
               <option value="gatos">🐱 Gatos</option>
             </select>
