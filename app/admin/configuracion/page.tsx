@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Check, X, RefreshCw, Eye, EyeOff, Wifi, WifiOff, AlertCircle, Settings, Link2, Unlink } from 'lucide-react'
 
@@ -384,7 +384,9 @@ export default function ConfiguracionPage() {
         <p className="text-zinc-500 text-sm mt-1">Estado de las conexiones y ajustes de la tienda</p>
       </div>
 
-      <OAuthBanner />
+      <Suspense fallback={null}>
+        <OAuthBanner />
+      </Suspense>
 
       <div className="grid lg:grid-cols-2 gap-5">
         <StoreSettingsCard />
