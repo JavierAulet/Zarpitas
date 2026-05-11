@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createServerClient } from '@/lib/supabase/server'
 import { ShoppingBag, ChevronRight } from 'lucide-react'
 import type { OrderStatus } from '@/lib/supabase/types'
+import { linkGuestOrders } from '@/lib/actions/orders'
 
 const STATUS_COLORS: Record<OrderStatus, string> = {
   pending: 'bg-yellow-50 text-yellow-600 border-yellow-100',
@@ -23,6 +24,11 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
 export default async function MisPedidosPage() {
   const supabase = createServerClient()
   const { data: { user } } = await supabase.auth.getUser()
+
+  // Link any guest orders placed with this email before querying
+  if (user?.email) {
+    await linkGuestOrders(user.id, user.email)
+  }
 
   const { data: orders } = await supabase
     .from('orders')

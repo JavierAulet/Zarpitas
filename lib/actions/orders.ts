@@ -4,6 +4,15 @@ import { createServiceClient as createServerClient } from '@/lib/supabase/server
 import { sendShippingNotification } from '@/lib/email'
 import type { OrderInsert, OrderStatus, OrderRow } from '@/lib/supabase/types'
 
+export async function linkGuestOrders(userId: string, email: string): Promise<void> {
+  const db = createServerClient()
+  await db
+    .from('orders')
+    .update({ user_id: userId, updated_at: new Date().toISOString() })
+    .eq('customer_email', email)
+    .is('user_id', null)
+}
+
 export async function saveOrder(order: OrderInsert) {
   const db = createServerClient()
   const { data, error } = await db
