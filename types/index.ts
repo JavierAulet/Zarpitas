@@ -42,3 +42,4 @@ export interface Category {
 
 export type FilterCategory = 'todos' | 'perros' | 'gatos'
 export type SortOption = 'relevancia' | 'precio-asc' | 'precio-desc' | 'valoracion'
+export type PriceRange = 'todos' | 'menos-30' | '30-60' | 'mas-60'

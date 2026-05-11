@@ -2,7 +2,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
-import type { Product, FilterCategory, SortOption } from '@/types'
+import type { Product, FilterCategory, SortOption, PriceRange } from '@/types'
 import ProductGrid from '@/components/product/ProductGrid'
 import ProductFilters from '@/components/product/ProductFilters'
 
@@ -10,6 +10,7 @@ export default function ProductsClient({ products }: { products: Product[] }) {
   const searchParams = useSearchParams()
   const [activeCategory, setActiveCategory] = useState<FilterCategory>('todos')
   const [activeSort, setActiveSort] = useState<SortOption>('relevancia')
+  const [activePriceRange, setActivePriceRange] = useState<PriceRange>('todos')
 
   useEffect(() => {
     const cat = searchParams.get('categoria') as FilterCategory | null
@@ -20,16 +21,25 @@ export default function ProductsClient({ products }: { products: Product[] }) {
 
   const filteredProducts = useMemo(() => {
     let result = [...products]
+
     if (activeCategory !== 'todos') {
       result = result.filter((p) => p.category === activeCategory)
     }
-    switch (activeSort) {
-      case 'precio-asc': result.sort((a, b) => a.price - b.price); break
-      case 'precio-desc': result.sort((a, b) => b.price - a.price); break
-      case 'valoracion': result.sort((a, b) => b.rating - a.rating); break
+
+    switch (activePriceRange) {
+      case 'menos-30': result = result.filter((p) => p.price < 30); break
+      case '30-60':    result = result.filter((p) => p.price >= 30 && p.price <= 60); break
+      case 'mas-60':   result = result.filter((p) => p.price > 60); break
     }
+
+    switch (activeSort) {
+      case 'precio-asc':  result.sort((a, b) => a.price - b.price); break
+      case 'precio-desc': result.sort((a, b) => b.price - a.price); break
+      case 'valoracion':  result.sort((a, b) => b.rating - a.rating); break
+    }
+
     return result
-  }, [activeCategory, activeSort, products])
+  }, [activeCategory, activeSort, activePriceRange, products])
 
   const catEmoji = activeCategory === 'perros' ? '🐶' : activeCategory === 'gatos' ? '🐱' : '🐾'
 
@@ -70,8 +80,10 @@ export default function ProductsClient({ products }: { products: Product[] }) {
           <ProductFilters
             activeCategory={activeCategory}
             activeSort={activeSort}
+            activePriceRange={activePriceRange}
             onCategoryChange={setActiveCategory}
             onSortChange={setActiveSort}
+            onPriceRangeChange={setActivePriceRange}
             totalCount={filteredProducts.length}
           />
           <ProductGrid products={filteredProducts} />

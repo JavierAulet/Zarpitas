@@ -6,8 +6,10 @@ import { ArrowRight, Clock } from 'lucide-react'
 import { getActiveProduct, getActiveProducts } from '@/lib/actions/products'
 import ProductDetail from '@/components/product/ProductDetail'
 import RelatedProducts from '@/components/product/RelatedProducts'
+import ProductReviews from '@/components/product/ProductReviews'
 import Newsletter from '@/components/home/Newsletter'
 import { getBlogPostsByProduct } from '@/lib/data/blog'
+import { createServerClient } from '@/lib/supabase/server'
 import type { Product } from '@/types'
 
 export const revalidate = 60
@@ -142,10 +144,17 @@ function BreadcrumbJsonLd({ product }: { product: Product }) {
 }
 
 export default async function ProductoDetailPage({ params }: Props) {
-  const [product, allProducts] = await Promise.all([
+  const supabase = createServerClient()
+  const [product, allProducts, reviewsRes] = await Promise.all([
     getActiveProduct(params.id),
     getActiveProducts().catch(() => []),
+    supabase
+      .from('reviews')
+      .select('id, rating, title, body, reviewer_name, created_at')
+      .eq('product_id', params.id)
+      .order('created_at', { ascending: false }),
   ])
+  const reviews = reviewsRes.data ?? []
 
   if (!product) notFound()
 
@@ -184,6 +193,12 @@ export default async function ProductoDetailPage({ params }: Props) {
       </section>
 
       <RelatedProducts products={related} />
+
+      <ProductReviews
+        reviews={reviews}
+        productRating={product.rating}
+        reviewCount={product.reviews}
+      />
 
       {/* Related blog posts */}
       {relatedBlogPosts.length > 0 && (

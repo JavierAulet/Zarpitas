@@ -25,6 +25,9 @@ export default function ReviewForm({ productId, orderId, userId }: Props) {
     setError(null)
 
     const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    const reviewer_name = user?.user_metadata?.full_name ?? null
+
     const { error } = await supabase.from('reviews').insert({
       product_id: productId,
       order_id: orderId,
@@ -32,6 +35,7 @@ export default function ReviewForm({ productId, orderId, userId }: Props) {
       rating,
       title: title || null,
       body: body || null,
+      reviewer_name,
     })
 
     if (error) {

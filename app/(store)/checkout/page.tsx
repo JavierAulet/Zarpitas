@@ -4,11 +4,13 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { useForm } from 'react-hook-form'
-import { ArrowLeft, Lock, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Lock, ChevronDown, ChevronUp, AlertCircle, Tag, Check, Loader2 } from 'lucide-react'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import { useCartStore, useCartTotal } from '@/lib/store/cartStore'
 import { createClient } from '@/lib/supabase/client'
+import { validateCoupon, incrementCouponUsage } from '@/lib/actions/coupons'
+import type { CouponResult } from '@/lib/actions/coupons'
 import Button from '@/components/ui/Button'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
@@ -44,12 +46,14 @@ interface CheckoutInnerProps {
   grandTotal: number
   shipping: number
   subtotal: number
+  discount: number
+  couponCode: string | null
   userId: string | null
   isLoggedIn: boolean
   onSuccess: (orderId: string) => void
 }
 
-function CheckoutInner({ paymentIntentId, grandTotal, shipping, subtotal, userId, isLoggedIn, onSuccess }: CheckoutInnerProps) {
+function CheckoutInner({ paymentIntentId, grandTotal, shipping, subtotal, discount, couponCode, userId, isLoggedIn, onSuccess }: CheckoutInnerProps) {
   const stripe = useStripe()
   const elements = useElements()
   const items = useCartStore((state) => state.items)
@@ -128,6 +132,8 @@ function CheckoutInner({ paymentIntentId, grandTotal, shipping, subtotal, userId
             })),
             subtotal,
             shipping,
+            discount,
+            coupon_code: couponCode,
             total: grandTotal,
             user_id: userId,
             stripe_payment_intent_id: paymentIntent.id,
@@ -141,6 +147,9 @@ function CheckoutInner({ paymentIntentId, grandTotal, shipping, subtotal, userId
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ order_id }),
           }).catch((err) => console.error('[Checkout] Fulfillment error:', err))
+          if (couponCode) {
+            incrementCouponUsage(couponCode).catch(() => null)
+          }
           clearCart()
           onSuccess(order_id)
           return
@@ -378,10 +387,40 @@ function SuccessScreen({ isLoggedIn, orderId }: { isLoggedIn: boolean; orderId: 
 
 // ─── Order summary sidebar ────────────────────────────────────────────────────
 
-function OrderSummary({ total, shipping, grandTotal, freeShipping }: {
-  total: number; shipping: number; grandTotal: number; freeShipping: boolean
+function OrderSummary({ total, shipping, grandTotal, freeShipping, discount, coupon, subtotal, onCouponApplied }: {
+  total: number
+  shipping: number
+  grandTotal: number
+  freeShipping: boolean
+  discount: number
+  coupon: CouponResult | null
+  subtotal: number
+  onCouponApplied: (result: CouponResult | null) => void
 }) {
   const items = useCartStore((state) => state.items)
+  const [couponInput, setCouponInput] = useState('')
+  const [couponLoading, setCouponLoading] = useState(false)
+  const [couponError, setCouponError] = useState<string | null>(null)
+
+  const handleApplyCoupon = async () => {
+    if (!couponInput.trim()) return
+    setCouponLoading(true)
+    setCouponError(null)
+    const result = await validateCoupon(couponInput, subtotal)
+    if (result.valid) {
+      onCouponApplied(result)
+    } else {
+      setCouponError(result.error ?? 'Código inválido')
+      onCouponApplied(null)
+    }
+    setCouponLoading(false)
+  }
+
+  const handleRemoveCoupon = () => {
+    onCouponApplied(null)
+    setCouponInput('')
+    setCouponError(null)
+  }
 
   return (
     <div className="lg:col-span-2">
@@ -413,11 +452,66 @@ function OrderSummary({ total, shipping, grandTotal, freeShipping }: {
             ))}
           </div>
 
-          <div className="space-y-2.5 pt-4 border-t-2 border-cream-deep">
+          {/* Coupon input */}
+          <div className="pt-4 border-t-2 border-cream-deep mb-4">
+            {coupon ? (
+              <div className="flex items-center justify-between bg-green-50 border border-green/20 rounded-2xl px-3 py-2.5">
+                <div className="flex items-center gap-2">
+                  <Tag size={13} className="text-green shrink-0" />
+                  <span className="text-xs font-bold text-green">{coupon.code}</span>
+                  <span className="text-xs text-green">
+                    {coupon.type === 'percent' ? `-${coupon.value}%` : `-${coupon.value}€`}
+                  </span>
+                </div>
+                <button onClick={handleRemoveCoupon} className="text-xs text-text-muted hover:text-red-500 transition-colors font-medium">
+                  Quitar
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Tag size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+                    <input
+                      type="text"
+                      value={couponInput}
+                      onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                      onKeyDown={(e) => e.key === 'Enter' && handleApplyCoupon()}
+                      placeholder="Código de descuento"
+                      className="w-full bg-cream-warm border-2 border-cream-deep rounded-xl pl-8 pr-3 py-2 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-orange/50 transition-colors font-mono"
+                    />
+                  </div>
+                  <button
+                    onClick={handleApplyCoupon}
+                    disabled={couponLoading || !couponInput.trim()}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-text-primary text-white text-xs font-bold rounded-xl hover:bg-text-secondary transition-colors disabled:opacity-50 shrink-0"
+                  >
+                    {couponLoading ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
+                    Aplicar
+                  </button>
+                </div>
+                {couponError && (
+                  <p className="text-xs text-red-500 flex items-center gap-1">
+                    <AlertCircle size={11} /> {couponError}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2.5">
             <div className="flex justify-between text-sm">
               <span className="text-text-secondary">Subtotal</span>
               <span className="font-medium">{total.toFixed(2).replace('.', ',')}€</span>
             </div>
+            {discount > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-green font-bold flex items-center gap-1">
+                  <Tag size={11} /> Descuento
+                </span>
+                <span className="font-bold text-green">-{discount.toFixed(2).replace('.', ',')}€</span>
+              </div>
+            )}
             <div className="flex justify-between text-sm">
               <span className="text-text-secondary">Envío</span>
               <span className={freeShipping ? 'font-bold text-green' : 'font-medium'}>
@@ -456,7 +550,10 @@ export default function CheckoutPage() {
   const total = useCartTotal()
   const freeShipping = total >= 40
   const shipping = freeShipping ? 0 : 4.99
-  const grandTotal = total + shipping
+
+  const [appliedCoupon, setAppliedCoupon] = useState<CouponResult | null>(null)
+  const discount = appliedCoupon?.discountAmount ?? 0
+  const grandTotal = Math.max(0, total + shipping - discount)
 
   const [success, setSuccess] = useState(false)
   const [orderId, setOrderId] = useState('')
@@ -572,6 +669,8 @@ export default function CheckoutPage() {
                 grandTotal={grandTotal}
                 shipping={shipping}
                 subtotal={total}
+                discount={discount}
+                couponCode={appliedCoupon?.code ?? null}
                 userId={userId}
                 isLoggedIn={isLoggedIn}
                 onSuccess={(id) => { setOrderId(id); setSuccess(true) }}
@@ -596,6 +695,10 @@ export default function CheckoutPage() {
             shipping={shipping}
             grandTotal={grandTotal}
             freeShipping={freeShipping}
+            discount={discount}
+            coupon={appliedCoupon}
+            subtotal={total}
+            onCouponApplied={setAppliedCoupon}
           />
         </div>
       </div>
