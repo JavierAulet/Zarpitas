@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
@@ -546,14 +546,11 @@ function OrderSummary({ total, shipping, grandTotal, freeShipping, discount, cou
 
 // ─── Page root ────────────────────────────────────────────────────────────────
 
-export default function CheckoutPage() {
-  const items = useCartStore((state) => state.items)
-  const restoreCart = useCartStore((state) => state.restoreCart)
-  const total = useCartTotal()
-  const freeShipping = total >= 40
-  const shipping = freeShipping ? 0 : 4.99
+// ─── Cart recovery (isolated to satisfy Suspense requirement for useSearchParams) ─
 
+function CartRecovery() {
   const searchParams = useSearchParams()
+  const restoreCart = useCartStore((state) => state.restoreCart)
   const recoveredRef = useRef(false)
 
   useEffect(() => {
@@ -562,11 +559,20 @@ export default function CheckoutPage() {
     recoveredRef.current = true
     fetch(`/api/cart/recover?token=${token}`)
       .then((r) => r.json())
-      .then((data) => {
-        if (data.items?.length) restoreCart(data.items)
-      })
+      .then((data) => { if (data.items?.length) restoreCart(data.items) })
       .catch(() => null)
   }, [searchParams, restoreCart])
+
+  return null
+}
+
+// ─── Page root ────────────────────────────────────────────────────────────────
+
+export default function CheckoutPage() {
+  const items = useCartStore((state) => state.items)
+  const total = useCartTotal()
+  const freeShipping = total >= 40
+  const shipping = freeShipping ? 0 : 4.99
 
   const [appliedCoupon, setAppliedCoupon] = useState<CouponResult | null>(null)
   const discount = appliedCoupon?.discountAmount ?? 0
@@ -630,6 +636,7 @@ export default function CheckoutPage() {
 
   return (
     <div className="min-h-screen bg-cream pt-20">
+      <Suspense fallback={null}><CartRecovery /></Suspense>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {/* Header */}
         <div className="flex items-center gap-4 mb-10">
