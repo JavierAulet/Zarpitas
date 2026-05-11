@@ -4,13 +4,15 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { Plus, Trash2, Loader2, Upload, X, Star, RefreshCw } from 'lucide-react'
 import { createProduct, updateProduct } from '@/lib/actions/products'
-import type { ProductRow } from '@/lib/supabase/types'
+import { createVariant, deleteVariant } from '@/lib/actions/variants'
+import type { ProductRow, ProductVariantRow } from '@/lib/supabase/types'
 
 type FormMode = 'create' | 'edit'
 
 interface Props {
   mode: FormMode
   product?: ProductRow
+  variants?: ProductVariantRow[]
 }
 
 const labelClass = 'block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1.5'
@@ -163,7 +165,7 @@ function MultiImageUploader({ productId, images, onChange }: MultiImageUploaderP
 
 // ─── Main form ────────────────────────────────────────────────────────────────
 
-export default function ProductForm({ mode, product }: Props) {
+export default function ProductForm({ mode, product, variants: initialVariants = [] }: Props) {
   const router = useRouter()
   const [, startTransition] = useTransition()
   const [isPending, setIsPending] = useState(false)
@@ -185,6 +187,50 @@ export default function ProductForm({ mode, product }: Props) {
     product?.images?.length ? product.images : product?.image ? [product.image] : []
   )
   const [active, setActive] = useState(product?.active ?? true)
+
+  // Variants state (edit mode only)
+  const [variants, setVariants] = useState<ProductVariantRow[]>(initialVariants)
+  const [newVariantName, setNewVariantName] = useState('')
+  const [newVariantModifier, setNewVariantModifier] = useState('0')
+  const [newVariantStock, setNewVariantStock] = useState('0')
+  const [variantLoading, setVariantLoading] = useState(false)
+
+  const handleAddVariant = async () => {
+    if (!newVariantName.trim() || !product?.id) return
+    setVariantLoading(true)
+    try {
+      await createVariant({
+        product_id: product.id,
+        name: newVariantName.trim(),
+        price_modifier: parseFloat(newVariantModifier) || 0,
+        stock: parseInt(newVariantStock) || 0,
+        sort_order: variants.length,
+      })
+      setVariants((prev) => [...prev, {
+        id: crypto.randomUUID(),
+        product_id: product.id,
+        name: newVariantName.trim(),
+        sku: null,
+        price_modifier: parseFloat(newVariantModifier) || 0,
+        stock: parseInt(newVariantStock) || 0,
+        active: true,
+        sort_order: prev.length,
+        created_at: new Date().toISOString(),
+      }])
+      setNewVariantName('')
+      setNewVariantModifier('0')
+      setNewVariantStock('0')
+    } catch {
+      // error silently, page will revalidate
+    }
+    setVariantLoading(false)
+  }
+
+  const handleDeleteVariant = async (variantId: string) => {
+    if (!product?.id) return
+    await deleteVariant(variantId, product.id)
+    setVariants((prev) => prev.filter((v) => v.id !== variantId))
+  }
 
   const handleNameChange = (v: string) => {
     setName(v)
@@ -297,6 +343,85 @@ export default function ProductForm({ mode, product }: Props) {
             <Plus size={15} /> Añadir característica
           </button>
         </div>
+
+        {mode === 'edit' && (
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-white font-bold">Variantes</h2>
+              <span className="text-zinc-500 text-xs">Tallas, colores, etc.</span>
+            </div>
+
+            {/* Existing variants */}
+            {variants.length > 0 && (
+              <div className="space-y-2">
+                {variants.map((v) => (
+                  <div key={v.id} className="flex items-center gap-3 bg-zinc-800 rounded-xl px-3 py-2.5">
+                    <span className="flex-1 text-white text-sm font-medium">{v.name}</span>
+                    {v.price_modifier !== 0 && (
+                      <span className="text-orange text-xs font-mono">
+                        {v.price_modifier > 0 ? '+' : ''}{v.price_modifier.toFixed(2)}€
+                      </span>
+                    )}
+                    <span className="text-zinc-500 text-xs w-14 text-right">
+                      {v.stock} uds.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteVariant(v.id)}
+                      className="p-1.5 rounded-lg text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-colors flex-shrink-0"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add new variant */}
+            <div className="space-y-2.5 pt-2 border-t border-zinc-800">
+              <p className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Añadir variante</p>
+              <input
+                className={inputClass}
+                placeholder="Nombre (ej: Talla S, Color Azul)"
+                value={newVariantName}
+                onChange={(e) => setNewVariantName(e.target.value)}
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <p className="text-zinc-600 text-xs mb-1">Precio extra (€)</p>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className={inputClass}
+                    placeholder="0.00"
+                    value={newVariantModifier}
+                    onChange={(e) => setNewVariantModifier(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <p className="text-zinc-600 text-xs mb-1">Stock</p>
+                  <input
+                    type="number"
+                    min="0"
+                    className={inputClass}
+                    placeholder="0"
+                    value={newVariantStock}
+                    onChange={(e) => setNewVariantStock(e.target.value)}
+                  />
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleAddVariant}
+                disabled={!newVariantName.trim() || variantLoading}
+                className="flex items-center gap-2 text-sm text-orange hover:text-orange-light font-medium transition-colors disabled:opacity-40"
+              >
+                {variantLoading ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                Añadir variante
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
           <h2 className="text-white font-bold mb-4">AliExpress</h2>

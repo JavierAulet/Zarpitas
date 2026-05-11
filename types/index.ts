@@ -16,8 +16,33 @@ export interface Product {
   stock?: number
 }
 
-export interface CartItem extends Product {
+export interface ProductVariant {
+  id: string
+  name: string
+  priceModifier: number
+  stock: number
+}
+
+export interface CartItem {
+  id: string          // composite: productId or `${productId}_${variantId}`
+  productId: string   // real product id
+  name: string
+  price: number
+  originalPrice?: number
+  image: string | null
+  images?: string[]
+  category: 'perros' | 'gatos'
+  subcategory: string
+  badge?: 'nuevo' | 'oferta' | 'mas-vendido'
+  rating: number
+  reviews: number
+  description: string
+  features?: string[]
+  aliexpressId?: string
+  stock?: number
   quantity: number
+  variantId?: string
+  variantName?: string
 }
 
 export interface Testimonial {

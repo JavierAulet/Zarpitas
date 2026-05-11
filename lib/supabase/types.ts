@@ -134,6 +134,28 @@ export interface BlogPostInsert {
   published_at?: string | null
 }
 
+export interface ProductVariantRow {
+  id: string
+  product_id: string
+  name: string
+  sku: string | null
+  price_modifier: number
+  stock: number
+  active: boolean
+  sort_order: number
+  created_at: string
+}
+
+export interface ProductVariantInsert {
+  product_id: string
+  name: string
+  sku?: string | null
+  price_modifier?: number
+  stock?: number
+  active?: boolean
+  sort_order?: number
+}
+
 export interface OrderInsert {
   customer_email: string
   customer_name: string

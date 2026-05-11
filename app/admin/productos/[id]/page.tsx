@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { getProduct } from '@/lib/actions/products'
+import { getProductVariants } from '@/lib/actions/variants'
 import ProductForm from '@/components/admin/ProductForm'
 
 export const dynamic = 'force-dynamic'
@@ -17,6 +18,7 @@ export default async function EditProductoPage({ params }: Props) {
   } catch {
     notFound()
   }
+  const variants = await getProductVariants(params.id).catch(() => [])
 
   return (
     <div className="p-8">
@@ -32,7 +34,7 @@ export default async function EditProductoPage({ params }: Props) {
           <p className="text-zinc-500 text-sm mt-0.5 font-mono">{product.id}</p>
         </div>
       </div>
-      <ProductForm mode="edit" product={product} />
+      <ProductForm mode="edit" product={product} variants={variants} />
     </div>
   )
 }

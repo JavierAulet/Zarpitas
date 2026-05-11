@@ -1,10 +1,11 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { useForm } from 'react-hook-form'
 import { ArrowLeft, Lock, ChevronDown, ChevronUp, AlertCircle, Tag, Check, Loader2 } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import { useCartStore, useCartTotal } from '@/lib/store/cartStore'
@@ -123,8 +124,8 @@ function CheckoutInner({ paymentIntentId, grandTotal, shipping, subtotal, discou
               province: data.province,
             },
             items: items.map((i) => ({
-              id: i.id,
-              name: i.name,
+              id: i.productId,
+              name: i.variantName ? `${i.name} — ${i.variantName}` : i.name,
               price: i.price,
               quantity: i.quantity,
               image: i.image ?? null,
@@ -547,9 +548,25 @@ function OrderSummary({ total, shipping, grandTotal, freeShipping, discount, cou
 
 export default function CheckoutPage() {
   const items = useCartStore((state) => state.items)
+  const restoreCart = useCartStore((state) => state.restoreCart)
   const total = useCartTotal()
   const freeShipping = total >= 40
   const shipping = freeShipping ? 0 : 4.99
+
+  const searchParams = useSearchParams()
+  const recoveredRef = useRef(false)
+
+  useEffect(() => {
+    const token = searchParams.get('recover')
+    if (!token || recoveredRef.current) return
+    recoveredRef.current = true
+    fetch(`/api/cart/recover?token=${token}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.items?.length) restoreCart(data.items)
+      })
+      .catch(() => null)
+  }, [searchParams, restoreCart])
 
   const [appliedCoupon, setAppliedCoupon] = useState<CouponResult | null>(null)
   const discount = appliedCoupon?.discountAmount ?? 0

@@ -26,7 +26,10 @@ export default function CartItem({ item }: { item: CartItemType }) {
       {/* Info */}
       <div className="flex-1 min-w-0">
         <p className="text-[10px] text-text-muted font-bold uppercase tracking-wider mb-0.5">{item.subcategory}</p>
-        <p className="text-sm font-bold text-text-primary leading-tight line-clamp-2 mb-2">{item.name}</p>
+        <p className="text-sm font-bold text-text-primary leading-tight line-clamp-2 mb-0.5">{item.name}</p>
+        {item.variantName && (
+          <p className="text-[10px] text-orange font-bold mb-1.5">{item.variantName}</p>
+        )}
 
         <div className="flex items-center justify-between gap-2">
           {/* Qty */}

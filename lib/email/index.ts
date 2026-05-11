@@ -67,6 +67,24 @@ export async function sendShippingNotification(order: OrderEmailData): Promise<v
   }
 }
 
+export async function sendAbandonedCartEmail(
+  email: string,
+  items: Array<{ name: string; price: number; quantity: number; image?: string | null }>,
+  recoverToken: string
+): Promise<void> {
+  try {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://zarpitas.es'
+    await getResend().emails.send({
+      from: FROM,
+      to: email,
+      subject: '🛒 Olvidaste algo en tu carrito — Zarpitas',
+      html: abandonedCartHtml(items, `${appUrl}/checkout?recover=${recoverToken}`),
+    })
+  } catch (err) {
+    console.error('[Email] sendAbandonedCartEmail failed:', err)
+  }
+}
+
 export async function sendWelcomeEmail(email: string): Promise<void> {
   try {
     await getResend().emails.send({
@@ -364,5 +382,45 @@ function welcomeHtml(): string {
         ¿Dudas? <a href="mailto:hola@zarpitas.es" style="color:#FF6B35;">hola@zarpitas.es</a>
       </p>
     </div>
+  `)
+}
+
+function abandonedCartHtml(
+  items: Array<{ name: string; price: number; quantity: number }>,
+  recoverUrl: string
+): string {
+  const total = items.reduce((s, i) => s + i.price * i.quantity, 0)
+  const rows = items.map(i => `
+    <tr>
+      <td style="padding:10px 0;border-bottom:1px solid #EDE8E0;color:#333;font-size:14px;">${i.name}</td>
+      <td style="padding:10px 0;border-bottom:1px solid #EDE8E0;color:#777;font-size:14px;text-align:center;">×${i.quantity}</td>
+      <td style="padding:10px 0;border-bottom:1px solid #EDE8E0;color:#FF6B35;font-size:14px;font-weight:bold;text-align:right;">${fmt(i.price * i.quantity)}</td>
+    </tr>`).join('')
+
+  return wrap(`
+    <div style="text-align:center;margin-bottom:28px;">
+      <div style="font-size:48px;margin-bottom:14px;">🛒</div>
+      <h2 style="margin:0 0 8px;color:#1A1A1A;font-size:26px;font-weight:900;">Olvidaste algo en tu carrito</h2>
+      <p style="margin:0;color:#666;font-size:15px;">Los artículos que seleccionaste siguen esperándote.</p>
+    </div>
+
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse;margin-bottom:20px;">
+      <tr>
+        <th style="text-align:left;padding:0 0 10px;color:#AAA;font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #EDE8E0;">Producto</th>
+        <th style="text-align:center;padding:0 0 10px;color:#AAA;font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #EDE8E0;">Uds.</th>
+        <th style="text-align:right;padding:0 0 10px;color:#AAA;font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #EDE8E0;">Precio</th>
+      </tr>
+      ${rows}
+      <tr>
+        <td colspan="2" style="padding:14px 0 0;color:#1A1A1A;font-size:16px;font-weight:900;">Total</td>
+        <td style="padding:14px 0 0;color:#FF6B35;font-size:20px;font-weight:900;text-align:right;">${fmt(total)}</td>
+      </tr>
+    </table>
+
+    ${btn(recoverUrl, 'Recuperar mi carrito →')}
+
+    <p style="margin:22px 0 0;color:#AAA;font-size:12px;text-align:center;">
+      Tu carrito se guarda durante 48h · <a href="https://zarpitas.es" style="color:#FF6B35;">Seguir comprando</a>
+    </p>
   `)
 }

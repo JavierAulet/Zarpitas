@@ -4,6 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { ArrowRight, Clock } from 'lucide-react'
 import { getActiveProduct, getActiveProducts } from '@/lib/actions/products'
+import { getProductVariants } from '@/lib/actions/variants'
 import ProductDetail from '@/components/product/ProductDetail'
 import RelatedProducts from '@/components/product/RelatedProducts'
 import ProductReviews from '@/components/product/ProductReviews'
@@ -145,7 +146,7 @@ function BreadcrumbJsonLd({ product }: { product: Product }) {
 
 export default async function ProductoDetailPage({ params }: Props) {
   const supabase = createServerClient()
-  const [product, allProducts, reviewsRes] = await Promise.all([
+  const [product, allProducts, reviewsRes, variantRows] = await Promise.all([
     getActiveProduct(params.id),
     getActiveProducts().catch(() => []),
     supabase
@@ -153,8 +154,15 @@ export default async function ProductoDetailPage({ params }: Props) {
       .select('id, rating, title, body, reviewer_name, created_at')
       .eq('product_id', params.id)
       .order('created_at', { ascending: false }),
+    getProductVariants(params.id).catch(() => []),
   ])
   const reviews = reviewsRes.data ?? []
+  const variants = variantRows.map((v) => ({
+    id: v.id,
+    name: v.name,
+    priceModifier: v.price_modifier,
+    stock: v.stock,
+  }))
 
   if (!product) notFound()
 
@@ -188,7 +196,7 @@ export default async function ProductoDetailPage({ params }: Props) {
             <span className="text-text-primary font-medium line-clamp-1">{product.name}</span>
           </nav>
 
-          <ProductDetail product={product} />
+          <ProductDetail product={product} variants={variants} />
         </div>
       </section>
 

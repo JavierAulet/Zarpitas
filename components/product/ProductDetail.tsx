@@ -4,7 +4,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ShoppingCart, Check, Truck, RotateCcw, Shield, Minus, Plus, ChevronLeft, ChevronRight, Zap } from 'lucide-react'
-import type { Product } from '@/types'
+import type { Product, ProductVariant } from '@/types'
 import Badge from '@/components/ui/Badge'
 import StarRating from '@/components/ui/StarRating'
 import Button from '@/components/ui/Button'
@@ -13,12 +13,16 @@ import { useUIStore } from '@/lib/store/uiStore'
 
 interface ProductDetailProps {
   product: Product
+  variants?: ProductVariant[]
 }
 
-export default function ProductDetail({ product }: ProductDetailProps) {
+export default function ProductDetail({ product, variants = [] }: ProductDetailProps) {
   const [selectedImage, setSelectedImage] = useState(0)
   const [quantity, setQuantity] = useState(1)
   const [added, setAdded] = useState(false)
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(
+    variants.length > 0 ? variants[0] : null
+  )
 
   const addItem = useCartStore((state) => state.addItem)
   const openCart = useUIStore((state) => state.openCart)
@@ -27,15 +31,20 @@ export default function ProductDetail({ product }: ProductDetailProps) {
   const images = (product.images?.length ? product.images : product.image ? [product.image] : []) as string[]
   const hasImages = images.length > 0
 
+  const effectivePrice = product.price + (selectedVariant?.priceModifier ?? 0)
+  const outOfStock = selectedVariant ? selectedVariant.stock === 0 : (product.stock ?? 1) === 0
+
   const handleAddToCart = () => {
-    addItem(product, quantity)
+    if (outOfStock) return
+    addItem(product, quantity, selectedVariant ?? undefined)
     setAdded(true)
     openCart()
     setTimeout(() => setAdded(false), 2200)
   }
 
   const handleBuyNow = () => {
-    addItem(product, quantity)
+    if (outOfStock) return
+    addItem(product, quantity, selectedVariant ?? undefined)
     router.push('/checkout')
   }
 
@@ -134,9 +143,9 @@ export default function ProductDetail({ product }: ProductDetailProps) {
         </div>
 
         {/* Price */}
-        <div className="flex items-baseline gap-3 mb-6 pb-6 border-b-2 border-cream-deep">
+        <div className="flex items-baseline gap-3 mb-5 pb-5 border-b-2 border-cream-deep">
           <span className="font-display font-black text-5xl text-orange">
-            {product.price.toFixed(2).replace('.', ',')}€
+            {effectivePrice.toFixed(2).replace('.', ',')}€
           </span>
           {product.originalPrice && (
             <span className="text-xl text-text-muted line-through">
@@ -144,6 +153,37 @@ export default function ProductDetail({ product }: ProductDetailProps) {
             </span>
           )}
         </div>
+
+        {/* Variant selector */}
+        {variants.length > 0 && (
+          <div className="mb-5">
+            <p className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">
+              Variante: <span className="text-orange">{selectedVariant?.name}</span>
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {variants.map((v) => (
+                <button
+                  key={v.id}
+                  onClick={() => setSelectedVariant(v)}
+                  disabled={v.stock === 0}
+                  className={`px-4 py-2 rounded-full text-sm font-bold border-2 transition-all duration-200 ${
+                    selectedVariant?.id === v.id
+                      ? 'border-orange bg-orange text-white'
+                      : v.stock === 0
+                      ? 'border-cream-deep bg-cream-warm text-text-muted line-through cursor-not-allowed'
+                      : 'border-cream-deep bg-white text-text-primary hover:border-orange/50'
+                  }`}
+                >
+                  {v.name}
+                  {v.priceModifier > 0 && ` +${v.priceModifier.toFixed(2).replace('.', ',')}€`}
+                </button>
+              ))}
+            </div>
+            {selectedVariant && selectedVariant.stock > 0 && selectedVariant.stock < 10 && (
+              <p className="text-xs text-orange font-bold mt-1.5">⚡ Solo {selectedVariant.stock} en stock</p>
+            )}
+          </div>
+        )}
 
         {/* Description */}
         <p className="text-text-secondary leading-relaxed mb-5">{product.description}</p>
@@ -178,16 +218,18 @@ export default function ProductDetail({ product }: ProductDetailProps) {
             </button>
           </div>
 
-          <Button onClick={handleAddToCart} fullWidth size="lg" className="gap-2">
+          <Button onClick={handleAddToCart} fullWidth size="lg" className="gap-2" disabled={outOfStock}>
             {added ? (
               <><Check size={18} /> ¡Añadido!</>
+            ) : outOfStock ? (
+              <>Sin stock</>
             ) : (
               <><ShoppingCart size={18} /> Añadir al carrito</>
             )}
           </Button>
         </div>
 
-        <Button onClick={handleBuyNow} variant="secondary" fullWidth size="lg" className="gap-2 mb-5">
+        <Button onClick={handleBuyNow} variant="secondary" fullWidth size="lg" className="gap-2 mb-5" disabled={outOfStock}>
           <Zap size={18} />
           Comprar ahora
         </Button>
@@ -206,7 +248,7 @@ export default function ProductDetail({ product }: ProductDetailProps) {
           ))}
         </div>
 
-        {product.stock !== undefined && product.stock < 20 && (
+        {variants.length === 0 && product.stock !== undefined && product.stock > 0 && product.stock < 20 && (
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4 text-sm font-bold text-orange">
             ⚡ ¡Solo quedan {product.stock} unidades!
           </motion.p>
