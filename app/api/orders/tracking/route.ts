@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
-import { getTrackingInfo } from '@/lib/aliexpress/client'
 import type { OrderRow } from '@/lib/supabase/types'
 
 export async function GET(req: NextRequest) {
@@ -55,9 +54,13 @@ export async function GET(req: NextRequest) {
   console.log(`[Tracking] Fetching AliExpress tracking for order ${aliexpressOrderId}`)
 
   try {
-    const tracking = await getTrackingInfo(aliexpressOrderId)
+    const apiUrl = process.env.ALIEXPRESS_API_URL
+    if (!apiUrl) throw new Error('ALIEXPRESS_API_URL not configured')
 
-    if (!tracking) {
+    const res = await fetch(`${apiUrl}/tracking?order_id=${aliexpressOrderId}`)
+    const tracking = await res.json()
+
+    if (!res.ok || !tracking) {
       return NextResponse.json({ tracking_number: null, carrier: null, events: [], status: typedOrder.status })
     }
 
@@ -65,17 +68,17 @@ export async function GET(req: NextRequest) {
     await db
       .from('orders')
       .update({
-        tracking_number: tracking.logistics_no,
-        tracking_carrier: tracking.carrier,
-        tracking_events: tracking.events,
+        tracking_number: tracking.logistics_no ?? tracking.tracking_number ?? null,
+        tracking_carrier: tracking.carrier ?? null,
+        tracking_events: tracking.events ?? [],
         updated_at: new Date().toISOString(),
       })
       .eq('id', order_id)
 
     return NextResponse.json({
-      tracking_number: tracking.logistics_no,
-      carrier: tracking.carrier,
-      events: tracking.events,
+      tracking_number: tracking.logistics_no ?? tracking.tracking_number ?? null,
+      carrier: tracking.carrier ?? null,
+      events: tracking.events ?? [],
       status: typedOrder.status,
     })
   } catch (err) {

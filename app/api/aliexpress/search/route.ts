@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { searchAliExpressProducts } from '@/lib/aliexpress/client'
 import { rateLimit, getIp } from '@/lib/rateLimit'
 
 export async function GET(req: NextRequest) {
@@ -15,20 +14,24 @@ export async function GET(req: NextRequest) {
 
   const page = parseInt(req.nextUrl.searchParams.get('page') ?? '1', 10)
   const size = Math.min(parseInt(req.nextUrl.searchParams.get('size') ?? '20', 10), 50)
-  const sort = (req.nextUrl.searchParams.get('sort') ?? 'LAST_VOLUME_DESC') as
-    | 'SALE_PRICE_ASC'
-    | 'SALE_PRICE_DESC'
-    | 'LAST_VOLUME_DESC'
+  const sort = req.nextUrl.searchParams.get('sort') ?? 'LAST_VOLUME_DESC'
   const category_id = req.nextUrl.searchParams.get('category') ?? undefined
 
   try {
-    const result = await searchAliExpressProducts(q, {
-      page_index: page,
-      page_size: size,
-      sort,
-      category_id,
-    })
-    return NextResponse.json(result)
+    const apiUrl = process.env.ALIEXPRESS_API_URL
+    if (!apiUrl) throw new Error('ALIEXPRESS_API_URL not configured')
+
+    const params = new URLSearchParams({ q, page: String(page), size: String(size), sort })
+    if (category_id) params.set('category', category_id)
+
+    const res = await fetch(`${apiUrl}/search?${params}`)
+    const data = await res.json()
+
+    if (!res.ok) {
+      return NextResponse.json({ error: data.error ?? 'API error' }, { status: res.status })
+    }
+
+    return NextResponse.json(data)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     return NextResponse.json({ error: message }, { status: 502 })

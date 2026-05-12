@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
-import { createAliExpressOrder } from '@/lib/aliexpress/client'
 import { sendOrderConfirmation, sendAdminNewOrder } from '@/lib/email'
 import type { OrderRow, AliExpressOrderRef } from '@/lib/supabase/types'
 
@@ -92,11 +91,19 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      const result = await createAliExpressOrder({
-        out_order_id: `${order_id}-${item.id}`,
-        logistics_address,
-        product_items: [{ product_id: parseInt(aliexpressProductId, 10), product_count: item.quantity }],
+      const apiUrl = process.env.ALIEXPRESS_API_URL
+      if (!apiUrl) throw new Error('ALIEXPRESS_API_URL not configured')
+
+      const res = await fetch(`${apiUrl}/order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          out_order_id: `${order_id}-${item.id}`,
+          logistics_address,
+          product_items: [{ product_id: parseInt(aliexpressProductId, 10), product_count: item.quantity }],
+        }),
       })
+      const result = await res.json()
 
       if (result.success && result.order_list?.length) {
         for (const ref of result.order_list) {
