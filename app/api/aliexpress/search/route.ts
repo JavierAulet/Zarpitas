@@ -1,8 +1,6 @@
-﻿export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
+import { searchAliExpressProducts } from '@/lib/aliexpress/client'
 import { rateLimit, getIp } from '@/lib/rateLimit'
-
-const API_URL = process.env.ALIEXPRESS_API_URL ?? 'http://localhost:3001'
 
 export async function GET(req: NextRequest) {
   const { success } = rateLimit(getIp(req), 20, 60_000)
@@ -15,25 +13,24 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Missing query parameter q' }, { status: 400 })
   }
 
-  const params = new URLSearchParams({ q })
-  const page = req.nextUrl.searchParams.get('page')
-  const size = req.nextUrl.searchParams.get('size')
-  const sort = req.nextUrl.searchParams.get('sort')
-  const category = req.nextUrl.searchParams.get('category')
-  if (page) params.set('page', page)
-  if (size) params.set('size', size)
-  if (sort) params.set('sort', sort)
-  if (category) params.set('category', category)
+  const page = parseInt(req.nextUrl.searchParams.get('page') ?? '1', 10)
+  const size = Math.min(parseInt(req.nextUrl.searchParams.get('size') ?? '20', 10), 50)
+  const sort = (req.nextUrl.searchParams.get('sort') ?? 'LAST_VOLUME_DESC') as
+    | 'SALE_PRICE_ASC'
+    | 'SALE_PRICE_DESC'
+    | 'LAST_VOLUME_DESC'
+  const category_id = req.nextUrl.searchParams.get('category') ?? undefined
 
   try {
-    const res = await fetch(`${API_URL}/search?${params.toString()}`, {
-      next: { revalidate: 0 },
+    const result = await searchAliExpressProducts(q, {
+      page_index: page,
+      page_size: size,
+      sort,
+      category_id,
     })
-    const data = await res.json()
-    return NextResponse.json(data, { status: res.status })
+    return NextResponse.json(result)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     return NextResponse.json({ error: message }, { status: 502 })
   }
 }
-

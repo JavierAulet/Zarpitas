@@ -1,4 +1,3 @@
-﻿export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 
@@ -17,4 +16,3 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({ items: data.items })
 }
-

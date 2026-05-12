@@ -1,4 +1,3 @@
-﻿export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe/server'
 
@@ -31,4 +30,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: message }, { status: 502 })
   }
 }
-

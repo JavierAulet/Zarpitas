@@ -1,4 +1,3 @@
-﻿export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 
@@ -26,4 +25,3 @@ export async function DELETE() {
   cookieStore.delete('zarpitas_admin')
   return NextResponse.json({ ok: true })
 }
-

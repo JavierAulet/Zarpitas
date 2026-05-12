@@ -1,4 +1,3 @@
-﻿export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { getTrackingInfo } from '@/lib/aliexpress/client'
@@ -84,4 +83,3 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Could not fetch tracking info' }, { status: 502 })
   }
 }
-

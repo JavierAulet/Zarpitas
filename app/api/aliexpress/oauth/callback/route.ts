@@ -1,4 +1,3 @@
-﻿export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 
@@ -61,4 +60,3 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.redirect(new URL('/admin/configuracion?oauth=success', req.url))
 }
-

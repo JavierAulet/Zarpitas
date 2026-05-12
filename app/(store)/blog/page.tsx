@@ -57,7 +57,7 @@ function formatDate(iso: string): string {
 }
 
 export default async function BlogPage() {
-  const posts = await getBlogPosts().catch(() => [] as Awaited<ReturnType<typeof getBlogPosts>>)
+  const posts = await getBlogPosts()
   const [featured, ...rest] = posts
 
   if (!featured) {

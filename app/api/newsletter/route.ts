@@ -1,4 +1,3 @@
-﻿export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { sendWelcomeEmail } from '@/lib/email'
 import { rateLimit, getIp } from '@/lib/rateLimit'
@@ -17,4 +16,3 @@ export async function POST(req: NextRequest) {
   await sendWelcomeEmail(email.trim().toLowerCase())
   return NextResponse.json({ success: true })
 }
-
