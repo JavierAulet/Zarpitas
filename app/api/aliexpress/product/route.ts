@@ -1,3 +1,4 @@
+﻿export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { rateLimit, getIp } from '@/lib/rateLimit'
 
@@ -25,3 +26,4 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: message }, { status: 502 })
   }
 }
+

@@ -1,3 +1,4 @@
+﻿export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 
@@ -59,3 +60,4 @@ export async function POST() {
 
   return NextResponse.json({ success: true, expires_at: expiresAt })
 }
+

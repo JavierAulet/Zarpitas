@@ -1,3 +1,4 @@
+﻿export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
@@ -12,3 +13,4 @@ export async function GET() {
   const url = `https://oauth.aliexpress.com/authorize?${params.toString()}`
   return NextResponse.redirect(url)
 }
+

@@ -1,3 +1,4 @@
+﻿export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { saveOrder } from '@/lib/actions/orders'
 import type { OrderInsert } from '@/lib/supabase/types'
@@ -18,3 +19,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Could not save order' }, { status: 500 })
   }
 }
+

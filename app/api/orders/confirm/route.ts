@@ -1,3 +1,4 @@
+﻿export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { createAliExpressOrder } from '@/lib/aliexpress/client'
@@ -130,3 +131,4 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ success: true, status: newStatus, aliexpress_orders: aliexpressRefs, needs_manual_review: anyFailed })
 }
+

@@ -1,3 +1,4 @@
+﻿export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { generateSignature } from '@/lib/aliexpress/client'
 
@@ -19,3 +20,4 @@ export async function GET() {
     return NextResponse.json({ ok: false, error: String(e) }, { status: 500 })
   }
 }
+
