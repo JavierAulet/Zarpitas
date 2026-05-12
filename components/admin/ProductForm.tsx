@@ -194,10 +194,12 @@ export default function ProductForm({ mode, product, variants: initialVariants =
   const [newVariantModifier, setNewVariantModifier] = useState('0')
   const [newVariantStock, setNewVariantStock] = useState('0')
   const [variantLoading, setVariantLoading] = useState(false)
+  const [variantError, setVariantError] = useState<string | null>(null)
 
   const handleAddVariant = async () => {
     if (!newVariantName.trim() || !product?.id) return
     setVariantLoading(true)
+    setVariantError(null)
     try {
       await createVariant({
         product_id: product.id,
@@ -220,16 +222,25 @@ export default function ProductForm({ mode, product, variants: initialVariants =
       setNewVariantName('')
       setNewVariantModifier('0')
       setNewVariantStock('0')
-    } catch {
-      // error silently, page will revalidate
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setVariantError(
+        msg.includes('product_variants') || msg.includes('relation') || msg.includes('does not exist')
+          ? 'Ejecuta migration_variants.sql en Supabase primero'
+          : msg
+      )
     }
     setVariantLoading(false)
   }
 
   const handleDeleteVariant = async (variantId: string) => {
     if (!product?.id) return
-    await deleteVariant(variantId, product.id)
-    setVariants((prev) => prev.filter((v) => v.id !== variantId))
+    try {
+      await deleteVariant(variantId, product.id)
+      setVariants((prev) => prev.filter((v) => v.id !== variantId))
+    } catch (err) {
+      setVariantError(err instanceof Error ? err.message : 'Error al eliminar')
+    }
   }
 
   const handleNameChange = (v: string) => {
@@ -419,6 +430,9 @@ export default function ProductForm({ mode, product, variants: initialVariants =
                 {variantLoading ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
                 Añadir variante
               </button>
+              {variantError && (
+                <p className="text-red-400 text-xs bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">{variantError}</p>
+              )}
             </div>
           </div>
         )}

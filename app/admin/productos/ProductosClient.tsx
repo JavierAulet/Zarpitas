@@ -125,6 +125,7 @@ interface ImportModalProps {
 }
 
 function ImportModal({ aliexpressId, onClose, onSaved }: ImportModalProps) {
+  const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -132,9 +133,12 @@ function ImportModal({ aliexpressId, onClose, onSaved }: ImportModalProps) {
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  const [features, setFeatures] = useState('')
   const [imageUrl, setImageUrl] = useState('')
   const [costPrice, setCostPrice] = useState('')
   const [salePrice, setSalePrice] = useState('')
+  const [originalPrice, setOriginalPrice] = useState('')
+  const [sku, setSku] = useState('')
   const [category, setCategory] = useState<'perros' | 'gatos'>('perros')
   const [subcategory, setSubcategory] = useState('')
   const [badge, setBadge] = useState<'nuevo' | 'oferta' | 'mas-vendido' | ''>('')
@@ -173,15 +177,18 @@ function ImportModal({ aliexpressId, onClose, onSaved }: ImportModalProps) {
     try {
       const id = slugify(name)
       const images = imageUrl.trim() ? [imageUrl.trim()] : []
+      const featuresList = features.split('\n').map((f) => f.trim()).filter(Boolean)
       await createProduct({
         id,
+        sku: sku.trim().toUpperCase() || null,
         name,
         price: saleNum,
         cost_price: costNum || null,
-        original_price: null,
+        original_price: originalPrice ? parseFloat(originalPrice) : null,
         image: images[0] ?? null,
         images,
         description,
+        features: featuresList,
         category,
         subcategory: subcategory || null,
         badge: badge || null,
@@ -190,6 +197,7 @@ function ImportModal({ aliexpressId, onClose, onSaved }: ImportModalProps) {
         active: false,
       })
       onSaved()
+      router.push(`/admin/productos/${id}`)
     } catch (e) {
       setSaveError(String(e))
       setSaving(false)
@@ -327,6 +335,34 @@ function ImportModal({ aliexpressId, onClose, onSaved }: ImportModalProps) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-zinc-400 text-xs font-bold uppercase tracking-wider mb-1.5">
+                Precio original / tachado (€)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={originalPrice}
+                onChange={(e) => setOriginalPrice(e.target.value)}
+                placeholder="69.99 (opcional)"
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-orange/50"
+              />
+            </div>
+            <div>
+              <label className="block text-zinc-400 text-xs font-bold uppercase tracking-wider mb-1.5">
+                SKU (referencia interna)
+              </label>
+              <input
+                value={sku}
+                onChange={(e) => setSku(e.target.value)}
+                placeholder="ZAR-DOG-001"
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-white text-sm font-mono focus:outline-none focus:border-orange/50"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-zinc-400 text-xs font-bold uppercase tracking-wider mb-1.5">
                 Categoría *
               </label>
               <select
@@ -379,6 +415,19 @@ function ImportModal({ aliexpressId, onClose, onSaved }: ImportModalProps) {
                 <option value="mas-vendido">Más vendido</option>
               </select>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-zinc-400 text-xs font-bold uppercase tracking-wider mb-1.5">
+              Características (una por línea)
+            </label>
+            <textarea
+              value={features}
+              onChange={(e) => setFeatures(e.target.value)}
+              rows={3}
+              placeholder={"Resistente al agua\nBatería de 30 días\nRastreo GPS en tiempo real"}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-orange/50 resize-none"
+            />
           </div>
 
           <div>
