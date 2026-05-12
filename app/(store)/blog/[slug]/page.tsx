@@ -9,14 +9,19 @@ import { getActiveProducts } from '@/lib/actions/products'
 import Newsletter from '@/components/home/Newsletter'
 
 export const revalidate = 3600
+export const dynamicParams = true
 
 interface Props {
   params: { slug: string }
 }
 
 export async function generateStaticParams() {
-  const posts = await getBlogPosts()
-  return posts.map((p) => ({ slug: p.slug }))
+  try {
+    const posts = await getBlogPosts()
+    return posts.map((p) => ({ slug: p.slug }))
+  } catch {
+    return []
+  }
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
