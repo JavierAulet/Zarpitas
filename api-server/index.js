@@ -112,6 +112,33 @@ function normalizeSpanishAddress(addr) {
   }
 }
 
+// ─── SKU lookup: numeric sku_id → sku_attr string ("14:xxx") ─────────────────
+
+async function resolveSkuAttr(productId, skuIdOrAttr) {
+  if (!skuIdOrAttr) return undefined
+  if (String(skuIdOrAttr).includes(':')) return String(skuIdOrAttr) // already in correct format
+
+  // Numeric sku_id — fetch product to find matching sku_attr
+  try {
+    const raw = await callAliExpress('aliexpress.ds.product.get', {
+      product_id: String(productId),
+      local_country: 'ES',
+      local_language: 'en',
+    })
+    const envelope = raw.aliexpress_ds_product_get_response ?? raw
+    const skus = envelope?.result?.aeop_ae_product_s_k_us?.global_aeop_ae_product_sku ?? []
+    const match = skus.find((s) => String(s.id) === String(skuIdOrAttr) || String(s.sku_id) === String(skuIdOrAttr))
+    if (match?.sku_attr) {
+      console.log(`[sku-lookup] Resolved ${skuIdOrAttr} → ${match.sku_attr}`)
+      return String(match.sku_attr)
+    }
+    console.log(`[sku-lookup] No match for sku_id=${skuIdOrAttr}, skus:`, skus.map(s => `${s.id}:${s.sku_attr}`))
+  } catch (err) {
+    console.error('[sku-lookup] Error:', err.message)
+  }
+  return undefined
+}
+
 // ─── Health ───────────────────────────────────────────────────────────────────
 
 app.get('/health', (req, res) => {
@@ -139,7 +166,19 @@ app.post('/order', async (req, res) => {
   }
 
   console.log('[/order] Normalized address:', JSON.stringify(normalizedAddress))
-  const orderPayload = { out_id, logistics_address: normalizedAddress, product_items }
+
+  // Resolve sku_attr for each item (translate numeric sku_id → "14:xxx" format)
+  const resolvedItems = await Promise.all(
+    product_items.map(async (item) => {
+      const skuAttr = await resolveSkuAttr(item.product_id, item.sku_attr ?? item.sku_id)
+      const resolved = { product_id: item.product_id, product_count: item.product_count }
+      if (skuAttr) resolved.sku_attr = skuAttr
+      return resolved
+    })
+  )
+  console.log('[/order] Resolved items:', JSON.stringify(resolvedItems))
+
+  const orderPayload = { out_id, logistics_address: normalizedAddress, product_items: resolvedItems }
 
   const attempts = [
     // DS API — la API pidió este param key cuando enviamos param_place_ds_order_request
