@@ -63,7 +63,16 @@ app.post('/order', async (req, res) => {
     return res.status(400).json({ success: false, error: 'Missing required fields' })
   }
 
-  const orderPayload = { out_id, logistics_address, product_items }
+  // Normalize address — ensure both field name variants are present
+  const normalizedAddress = {
+    ...logistics_address,
+    contact_person: logistics_address.contact_person ?? logistics_address.full_name ?? '',
+    full_name: logistics_address.full_name ?? logistics_address.contact_person ?? '',
+    phone_country_code: logistics_address.phone_country_code ?? logistics_address.phone_country ?? '34',
+    phone_country: logistics_address.phone_country ?? logistics_address.phone_country_code ?? '34',
+  }
+
+  const orderPayload = { out_id, logistics_address: normalizedAddress, product_items }
 
   const attempts = [
     // DS API — la API pidió este param key cuando enviamos param_place_ds_order_request
