@@ -1,6 +1,7 @@
 require('dotenv').config()
+
 const express = require('express')
-const { DropshipperClient } = require('ae_sdk')
+const crypto = require('crypto')
 
 const app = express()
 app.use(express.json())
@@ -9,13 +10,37 @@ const PORT = process.env.PORT || 3000
 const APP_KEY = process.env.ALIEXPRESS_APP_KEY
 const APP_SECRET = process.env.ALIEXPRESS_APP_SECRET
 const ACCESS_TOKEN = process.env.ALIEXPRESS_ACCESS_TOKEN
+const BASE_URL = 'https://api-sg.aliexpress.com/sync'
 
-function getClient() {
-  return new DropshipperClient({
+// ─── Signing ──────────────────────────────────────────────────────────────────
+
+function sign(params) {
+  const sorted = Object.keys(params).sort().map((k) => `${k}${params[k]}`).join('')
+  return crypto.createHmac('sha256', APP_SECRET).update(sorted).digest('hex').toUpperCase()
+}
+
+// ─── Raw AliExpress call ──────────────────────────────────────────────────────
+
+async function callAliExpress(method, extraParams) {
+  const params = {
     app_key: APP_KEY,
-    app_secret: APP_SECRET,
+    timestamp: Date.now().toString(),
+    sign_method: 'hmac-sha256',
+    format: 'json',
+    v: '2.0',
+    method,
     session: ACCESS_TOKEN,
+    ...extraParams,
+  }
+  params.sign = sign(params)
+
+  const res = await fetch(BASE_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8' },
+    body: new URLSearchParams(params).toString(),
   })
+
+  return res.json()
 }
 
 // ─── Health ───────────────────────────────────────────────────────────────────
@@ -23,9 +48,9 @@ function getClient() {
 app.get('/health', (req, res) => {
   res.json({
     ok: true,
-    app_key: APP_KEY ? `${APP_KEY.slice(0, 4)}...` : 'NOT SET',
+    app_key: APP_KEY ? 'SET' : 'NOT SET',
     app_secret: APP_SECRET ? 'SET' : 'NOT SET',
-    access_token: ACCESS_TOKEN ? `${ACCESS_TOKEN.slice(0, 8)}...` : 'NOT SET',
+    access_token: ACCESS_TOKEN ? 'SET' : 'NOT SET',
   })
 })
 
@@ -35,14 +60,10 @@ app.post('/order', async (req, res) => {
   const { out_id, logistics_address, product_items } = req.body
 
   if (!out_id || !logistics_address || !product_items?.length) {
-    return res.status(400).json({ success: false, error: 'Missing required fields: out_id, logistics_address, product_items' })
+    return res.status(400).json({ success: false, error: 'Missing required fields' })
   }
 
-  const orderPayload = {
-    out_id,
-    logistics_address,
-    product_items,
-  }
+  const orderPayload = { out_id, logistics_address, product_items }
 
   const attempts = [
     { method: 'aliexpress.ds.order.create',    paramKey: 'param_place_ds_order_request' },
@@ -50,23 +71,30 @@ app.post('/order', async (req, res) => {
     { method: 'aliexpress.trade.order.create', paramKey: 'param0' },
   ]
 
-  const client = getClient()
-
   for (const attempt of attempts) {
     console.log(`[/order] Trying method=${attempt.method} paramKey=${attempt.paramKey}`)
 
     try {
-      const raw = await client.call(attempt.method, {
+      const raw = await callAliExpress(attempt.method, {
         [attempt.paramKey]: JSON.stringify(orderPayload),
       })
 
       console.log(`[/order] Raw response (${attempt.method}):`, JSON.stringify(raw, null, 2))
 
-      // Unwrap response envelope
+      // Unwrap envelope: "aliexpress.ds.order.create" → "aliexpress_ds_order_create_response"
       const responseKey = attempt.method.replace(/\./g, '_') + '_response'
       const envelope = raw[responseKey] ?? raw
 
-      // DS API: { result: { is_success, order_list: { number: [...] } } }
+      if (raw.error_response) {
+        const errMsg = raw.error_response.msg ?? raw.error_response.sub_msg ?? 'API error'
+        const errCode = String(raw.error_response.code ?? '')
+        const isMissing = errCode === '27' || errMsg.toLowerCase().includes('missing') || errMsg.toLowerCase().includes('parameter')
+        console.log(`[/order] error_response via ${attempt.method}: code=${errCode} msg=${errMsg}`)
+        if (isMissing) continue
+        return res.json({ success: false, method: attempt.method, error: errMsg })
+      }
+
+      // DS API result structure
       const result = envelope.result ?? envelope
 
       const isSuccess =
@@ -74,23 +102,17 @@ app.post('/order', async (req, res) => {
         result.is_success === 'true' ||
         envelope.is_success === true
 
-      const errorCode = String(result.error_code ?? result.error_msg ?? envelope.error_code ?? '')
-      const isMissingParam =
-        errorCode.toLowerCase().includes('missing') ||
-        errorCode === '27' ||
-        errorCode.includes('MissingParameter')
-
       if (isSuccess) {
-        const orderListWrapper = result.order_list ?? {}
-        const orderIds = Array.isArray(orderListWrapper.number)
-          ? orderListWrapper.number
-          : orderListWrapper.number != null
-          ? [orderListWrapper.number]
-          : Array.isArray(orderListWrapper)
-          ? orderListWrapper.map((o) => o.order_id ?? o)
+        const wrapper = result.order_list ?? {}
+        const orderIds = Array.isArray(wrapper.number)
+          ? wrapper.number
+          : wrapper.number != null
+          ? [wrapper.number]
+          : Array.isArray(result.order_list)
+          ? result.order_list.map((o) => o.order_id ?? o)
           : []
 
-        console.log(`[/order] SUCCESS via ${attempt.method} — order_ids:`, orderIds)
+        console.log(`[/order] SUCCESS via ${attempt.method} — ids:`, orderIds)
         return res.json({
           success: true,
           method: attempt.method,
@@ -98,29 +120,24 @@ app.post('/order', async (req, res) => {
         })
       }
 
-      // If it's not a MissingParameter error, stop trying — real error
-      if (!isMissingParam) {
-        const errorMsg = result.error_desc ?? result.error_msg ?? errorCode ?? 'Unknown error'
-        console.log(`[/order] FAILED (non-retryable) via ${attempt.method}: ${errorMsg}`)
-        return res.json({ success: false, method: attempt.method, error: errorMsg })
-      }
-
-      console.log(`[/order] MissingParameter via ${attempt.method}, trying next...`)
+      const errorDesc = result.error_desc ?? result.error_msg ?? String(result.error_code ?? 'Unknown')
+      const isMissing = errorDesc.toLowerCase().includes('missing') || String(result.error_code ?? '').includes('27')
+      console.log(`[/order] is_success=false via ${attempt.method}: ${errorDesc}`)
+      if (isMissing) continue
+      return res.json({ success: false, method: attempt.method, error: errorDesc })
     } catch (err) {
       console.error(`[/order] Exception (${attempt.method}):`, err.message ?? err)
-      // Continue to next attempt on exception
     }
   }
 
-  return res.json({ success: false, error: 'All order placement attempts failed (MissingParameter or exception)' })
+  return res.json({ success: false, error: 'All attempts failed — check logs for raw responses' })
 })
 
 // ─── Product ──────────────────────────────────────────────────────────────────
 
 app.get('/product/:id', async (req, res) => {
   try {
-    const client = getClient()
-    const raw = await client.call('aliexpress.ds.product.get', {
+    const raw = await callAliExpress('aliexpress.ds.product.get', {
       product_id: req.params.id,
       local_country: 'ES',
       local_language: 'es',
@@ -135,8 +152,7 @@ app.get('/product/:id', async (req, res) => {
 
 app.get('/tracking/:order_id', async (req, res) => {
   try {
-    const client = getClient()
-    const raw = await client.call('aliexpress.logistics.order.trackinginfo.query', {
+    const raw = await callAliExpress('aliexpress.logistics.order.trackinginfo.query', {
       logistics_no: req.params.order_id,
     })
     const envelope = raw.aliexpress_logistics_order_trackinginfo_query_response ?? raw
@@ -160,7 +176,7 @@ app.get('/tracking/:order_id', async (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`[zarpitas-api] Listening on port ${PORT}`)
-  console.log('[zarpitas-api] APP_KEY=', process.env.ALIEXPRESS_APP_KEY ? 'SET' : 'NOT SET')
-  console.log('[zarpitas-api] APP_SECRET=', process.env.ALIEXPRESS_APP_SECRET ? 'SET' : 'NOT SET')
-  console.log('[zarpitas-api] ACCESS_TOKEN=', process.env.ALIEXPRESS_ACCESS_TOKEN ? 'SET' : 'NOT SET')
+  console.log('[zarpitas-api] APP_KEY=', APP_KEY ? 'SET' : 'NOT SET')
+  console.log('[zarpitas-api] APP_SECRET=', APP_SECRET ? 'SET' : 'NOT SET')
+  console.log('[zarpitas-api] ACCESS_TOKEN=', ACCESS_TOKEN ? 'SET' : 'NOT SET')
 })
