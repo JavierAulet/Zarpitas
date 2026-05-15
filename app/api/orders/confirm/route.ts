@@ -1,19 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { sendOrderConfirmation, sendAdminNewOrder } from '@/lib/email'
+import { createAliExpressOrder } from '@/lib/aliexpress/client'
 import type { OrderRow, AliExpressOrderRef } from '@/lib/supabase/types'
 
 function buildLogisticsAddress(order: OrderRow) {
   const addr = order.shipping_address
+  const fullName = `${addr.firstName} ${addr.lastName}`.trim()
   return {
-    country: 'ES',
-    province: addr.province,
-    city: addr.city,
-    zip: addr.postalCode,
+    contact_person: fullName,
+    full_name: fullName,
     address: addr.address,
-    contact_person: `${addr.firstName} ${addr.lastName}`.trim(),
+    city: addr.city,
+    province: addr.province,
+    zip: addr.postalCode,
+    country: 'ES',
+    phone_country: '34',
     mobile_no: order.customer_phone ?? '',
-    phone_country_code: '34',
   }
 }
 
@@ -91,26 +94,18 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      const apiUrl = process.env.ALIEXPRESS_API_URL
-      if (!apiUrl) throw new Error('ALIEXPRESS_API_URL not configured')
+      const typedItem = item as { aliexpressSkuId?: string; sku_attr?: string }
+      const skuAttr = typedItem.sku_attr ?? typedItem.aliexpressSkuId
 
-      const aliexpressSkuId = (item as { aliexpressSkuId?: string }).aliexpressSkuId
-      const productItem: Record<string, unknown> = {
-        product_id: parseInt(aliexpressProductId, 10),
-        product_count: item.quantity,
-      }
-      if (aliexpressSkuId) productItem.sku_id = aliexpressSkuId
-
-      const res = await fetch(`${apiUrl}/order`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          out_order_id: `${order_id}-${item.id}`,
-          logistics_address,
-          product_items: [productItem],
-        }),
+      const result = await createAliExpressOrder({
+        out_id: `ZAR-${order_id.slice(0, 8).toUpperCase()}-${item.id.slice(0, 4).toUpperCase()}`,
+        logistics_address,
+        product_items: [{
+          product_id: parseInt(aliexpressProductId, 10),
+          product_count: item.quantity,
+          ...(skuAttr ? { sku_attr: skuAttr } : {}),
+        }],
       })
-      const result = await res.json()
 
       if (result.success && result.order_list?.length) {
         for (const ref of result.order_list) {

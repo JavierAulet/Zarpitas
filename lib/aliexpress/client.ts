@@ -69,7 +69,8 @@ export function generateSignature(params: Record<string, string>, secret: string
 
 async function callAPI<T = unknown>(
   method: string,
-  params: Record<string, string>
+  params: Record<string, string>,
+  accessToken?: string
 ): Promise<T> {
   const base: Record<string, string> = {
     app_key: APP_KEY,
@@ -80,6 +81,7 @@ async function callAPI<T = unknown>(
     method,
     ...params,
   }
+  if (accessToken) base.session = accessToken
   base.sign = generateSignature(base, APP_SECRET)
 
   const res = await fetch(BASE_URL, {
@@ -139,16 +141,17 @@ export interface AliExpressProductSummary {
 }
 
 export interface AliExpressOrderParams {
-  out_order_id: string
+  out_id: string
   logistics_address: {
-    country: string
-    province: string
-    city: string
-    zip: string
-    address: string
     contact_person: string
+    full_name: string
+    address: string
+    city: string
+    province: string
+    zip: string
+    country: string
+    phone_country: string
     mobile_no: string
-    phone_country_code: string
   }
   product_items: Array<{
     product_id: number
@@ -284,34 +287,40 @@ export async function searchAliExpressProducts(
 export async function createAliExpressOrder(
   orderParams: AliExpressOrderParams
 ): Promise<AliExpressOrderResult> {
+  const accessToken = await getAccessToken()
+  if (!accessToken) return { success: false, error: 'No AliExpress access token' }
+
   const params: Record<string, string> = {
-    param_place_order_request4_open_api_d_t_o: JSON.stringify({
-      out_order_id: orderParams.out_order_id,
+    param_place_ds_order_request: JSON.stringify({
+      out_id: orderParams.out_id,
       logistics_address: orderParams.logistics_address,
       product_items: orderParams.product_items,
     }),
   }
 
-  const raw = await callAPI<Record<string, unknown>>('aliexpress.trade.order.create', params)
+  const raw = await callAPI<Record<string, unknown>>('aliexpress.ds.order.create', params, accessToken)
 
-  if (raw.result === false || raw.is_success === false) {
+  const result = raw.result as Record<string, unknown> | undefined
+
+  if (!result || result.is_success === false) {
     return {
       success: false,
-      error: String(raw.error_msg ?? raw.error_code ?? 'Order creation failed'),
+      error: String(result?.error_desc ?? result?.error_msg ?? raw.error_msg ?? 'Order creation failed'),
     }
   }
 
-  const orderList =
-    (raw.order_list as Record<string, unknown>[] | undefined) ??
-    ((raw.order_list as Record<string, unknown> | undefined)
-      ? [(raw.order_list as Record<string, unknown>)]
-      : [])
+  const orderListWrapper = result.order_list as Record<string, unknown> | undefined
+  const orderIds: number[] = Array.isArray(orderListWrapper?.number)
+    ? (orderListWrapper.number as number[])
+    : orderListWrapper?.number
+    ? [orderListWrapper.number as number]
+    : []
 
   return {
     success: true,
-    order_list: orderList.map((o) => ({
-      order_id: parseInt(String(o.order_id ?? '0'), 10),
-      product_id: parseInt(String(o.product_id ?? '0'), 10),
+    order_list: orderIds.map((orderId) => ({
+      order_id: orderId,
+      product_id: 0,
     })),
   }
 }
