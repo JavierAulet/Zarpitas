@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL('/admin/configuracion?oauth=error&reason=no_credentials', req.url))
   }
 
-  const client = new DropshipperClient({ app_key: appKey, app_secret: appSecret })
+  const client = new DropshipperClient({ app_key: appKey, app_secret: appSecret, session: '' })
 
   console.log('[OAuth callback] ── Calling ae_sdk generateToken ─────────────')
 
