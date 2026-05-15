@@ -156,7 +156,8 @@ function ImportModal({ aliexpressId, onClose, onSaved }: ImportModalProps) {
             setAllImages(data.images)
             setImageUrl(data.images[0])
           }
-          if (data.description) setDescription(data.description.slice(0, 500))
+          if (data.description) setDescription(data.description.slice(0, 1000))
+          if (data.stock && data.stock > 0) setStock(String(data.stock))
         }
       })
       .catch(() => {/* silent - user fills manually */})
