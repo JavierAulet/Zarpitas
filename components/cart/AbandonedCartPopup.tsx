@@ -96,7 +96,7 @@ export default function AbandonedCartPopup() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
             transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-            className="fixed inset-x-4 bottom-6 sm:inset-auto sm:left-1/2 sm:-translate-x-1/2 sm:bottom-8 sm:w-full sm:max-w-md z-[1000]"
+            className="fixed inset-x-4 top-1/2 -translate-y-1/2 sm:inset-auto sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:top-1/2 sm:w-full sm:max-w-md z-[1000]"
           >
             <div className="bg-white rounded-4xl shadow-2xl border-2 border-cream-deep overflow-hidden">
               {/* Header */}
