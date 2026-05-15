@@ -2,21 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { DropshipperClient } from 'ae_sdk'
 import { createServiceClient } from '@/lib/supabase/server'
 
-function extractTokenFields(data: Record<string, unknown>): {
-  access_token?: string
-  refresh_token?: string
-  expire_time?: number
-} {
-  const payload =
-    (data.data as Record<string, unknown> | undefined) ??
-    (data.result as Record<string, unknown> | undefined) ??
-    (data.auth_token_create_response as Record<string, unknown> | undefined) ??
-    data
-  return {
-    access_token: payload.access_token as string | undefined,
-    refresh_token: payload.refresh_token as string | undefined,
-    expire_time: payload.expire_time as number | undefined,
-  }
+// ae_sdk returns { ok: true, data: <raw AliExpress response> } or { ok: false, message, error_response }
+interface AeSdkResult {
+  ok: boolean
+  message?: string
+  error_response?: unknown
+  data?: Record<string, unknown>
 }
 
 export async function GET(req: NextRequest) {
@@ -50,33 +41,37 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL('/admin/configuracion?oauth=error&reason=no_credentials', req.url))
   }
 
+  // AESystemClient is not exported by ae_sdk — DropshipperClient has the same
+  // generateToken method on its base class and returns { ok, data }
   const client = new DropshipperClient({ app_key: appKey, app_secret: appSecret, session: '' })
 
-  console.log('[OAuth callback] ── Calling ae_sdk generateToken ─────────────')
+  console.log('[OAuth callback] ── Calling generateToken via ae_sdk ──────────')
 
-  let tokenResponse: Record<string, unknown>
+  let result: AeSdkResult
   try {
-    tokenResponse = (await client.generateToken({ code })) as Record<string, unknown>
+    result = (await client.generateToken({ code })) as AeSdkResult
   } catch (err) {
-    console.error('[OAuth callback] ae_sdk generateToken threw:', err)
+    console.error('[OAuth callback] generateToken threw:', err)
     return NextResponse.redirect(new URL('/admin/configuracion?oauth=error&reason=sdk_error', req.url))
   }
 
-  console.log('[OAuth callback] ae_sdk response:', JSON.stringify(tokenResponse))
+  console.log('[OAuth callback] Full response:', JSON.stringify(result))
 
-  const { access_token, refresh_token, expire_time } = extractTokenFields(tokenResponse)
-
-  console.log('[OAuth callback] access_token found:', !!access_token)
-  console.log('[OAuth callback] refresh_token found:', !!refresh_token)
-  console.log('[OAuth callback] expire_time:', expire_time)
-
-  if (!access_token) {
-    const raw = JSON.stringify(tokenResponse).slice(0, 300)
-    console.error('[OAuth callback] No access_token in response:', raw)
+  if (!result.ok || !result.data?.access_token) {
+    const raw = JSON.stringify(result).slice(0, 300)
+    console.error('[OAuth callback] Token exchange failed or no access_token. Response:', raw)
     return NextResponse.redirect(
       new URL(`/admin/configuracion?oauth=error&reason=no_token&raw=${encodeURIComponent(raw)}`, req.url)
     )
   }
+
+  const access_token = result.data.access_token as string
+  const refresh_token = result.data.refresh_token as string | undefined
+  const expire_time = result.data.expire_time as number | undefined
+
+  console.log('[OAuth callback] access_token:', `${access_token.slice(0, 10)}...`)
+  console.log('[OAuth callback] refresh_token present:', !!refresh_token)
+  console.log('[OAuth callback] expire_time:', expire_time)
 
   const expiresAt = expire_time
     ? new Date(expire_time).toISOString()
