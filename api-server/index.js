@@ -262,35 +262,25 @@ app.post('/order', async (req, res) => {
 
 // ─── Product ──────────────────────────────────────────────────────────────────
 
-app.get('/product/:id?', async (req, res) => {
-  const productId = req.params.id ?? req.query.id
-  const country = req.query.country ?? 'ES'
-  const language = req.query.language ?? 'es'
+async function handleProduct(productId, country, language, res) {
   if (!productId) return res.status(400).json({ error: 'Missing product id' })
-
   try {
     const raw = await callAliExpress('aliexpress.ds.product.get', {
       product_id: String(productId),
       local_country: country,
       local_language: language,
     })
-
     const envelope = raw.aliexpress_ds_product_get_response ?? raw
     const result = envelope?.result ?? {}
-
-    // Normalize to ae_item format that sync-product route expects
     const skus = result.aeop_ae_product_s_k_us?.global_aeop_ae_product_sku ?? []
     const images = (result.image_u_r_ls ?? '').split(';').filter(Boolean)
-
     const normalized = {
       result: {
         ae_item_base_info_dto: {
           subject: result.product_title ?? '',
           detail: result.aeop_ae_description?.description ?? '',
         },
-        ae_multimedia_info_dto: {
-          image_urls: images.join(';'),
-        },
+        ae_multimedia_info_dto: { image_urls: images.join(';') },
         ae_item_sku_info_dtos: {
           ae_item_sku_info_d_t_o: skus.map((s) => ({
             sku_id: String(s.id ?? ''),
@@ -307,11 +297,18 @@ app.get('/product/:id?', async (req, res) => {
         },
       },
     }
-
     res.json(normalized)
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
+}
+
+app.get('/product/:id', (req, res) => {
+  handleProduct(req.params.id, req.query.country ?? 'ES', req.query.language ?? 'es', res)
+})
+
+app.get('/product', (req, res) => {
+  handleProduct(req.query.id, req.query.country ?? 'ES', req.query.language ?? 'es', res)
 })
 
 // ─── Tracking ─────────────────────────────────────────────────────────────────
