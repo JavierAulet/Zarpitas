@@ -126,13 +126,22 @@ async function resolveSkuAttr(productId, skuIdOrAttr) {
       local_language: 'en',
     })
     const envelope = raw.aliexpress_ds_product_get_response ?? raw
-    const skus = envelope?.result?.aeop_ae_product_s_k_us?.global_aeop_ae_product_sku ?? []
+    const result = envelope?.result ?? {}
+    // Log keys to find correct SKU path
+    console.log(`[sku-lookup] result keys:`, Object.keys(result))
+    const skuContainer = result.aeop_ae_product_s_k_us ?? result.ae_item_sku_info_dtos ?? result.skus ?? {}
+    console.log(`[sku-lookup] skuContainer keys:`, Object.keys(skuContainer))
+    const skus =
+      skuContainer.global_aeop_ae_product_sku ??
+      skuContainer.ae_item_sku_info_d_t_o ??
+      skuContainer.sku ??
+      []
     const match = skus.find((s) => String(s.id) === String(skuIdOrAttr) || String(s.sku_id) === String(skuIdOrAttr))
     if (match?.sku_attr) {
       console.log(`[sku-lookup] Resolved ${skuIdOrAttr} → ${match.sku_attr}`)
       return String(match.sku_attr)
     }
-    console.log(`[sku-lookup] No match for sku_id=${skuIdOrAttr}, skus:`, skus.map(s => `${s.id}:${s.sku_attr}`))
+    console.log(`[sku-lookup] No match for sku_id=${skuIdOrAttr}, skus:`, JSON.stringify(skus).slice(0, 300))
   } catch (err) {
     console.error('[sku-lookup] Error:', err.message)
   }
