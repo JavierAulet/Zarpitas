@@ -17,6 +17,19 @@ function stripHtml(html: string): string {
     .trim()
 }
 
+interface SkuProperty {
+  sku_property_name?: string
+  property_value_definition_name?: string
+}
+
+interface SkuDto {
+  offer_sale_price?: string
+  sku_available_stock?: number
+  ae_sku_property_dtos?: {
+    ae_sku_property_d_t_o?: SkuProperty[]
+  }
+}
+
 interface VpsResponse {
   result?: {
     ae_item_base_info_dto?: {
@@ -29,10 +42,7 @@ interface VpsResponse {
       image_urls?: string
     }
     ae_item_sku_info_dtos?: {
-      ae_item_sku_info_d_t_o?: Array<{
-        offer_sale_price?: string
-        sku_available_stock?: number
-      }>
+      ae_item_sku_info_d_t_o?: SkuDto[]
     }
   }
   rsp_code?: number
@@ -61,7 +71,24 @@ function parseVpsResponse(raw: VpsResponse) {
 
   const description = baseInfo.detail ? stripHtml(baseInfo.detail).slice(0, 1000) : ''
 
-  return { name, images, price: priceEur, stock, description }
+  // Extract unique variant property names and values (size, color, etc.)
+  const variantGroups: Record<string, Set<string>> = {}
+  for (const sku of skuContainer) {
+    for (const prop of sku.ae_sku_property_dtos?.ae_sku_property_d_t_o ?? []) {
+      const name = prop.sku_property_name ?? ''
+      const val = prop.property_value_definition_name ?? ''
+      if (name && val) {
+        if (!variantGroups[name]) variantGroups[name] = new Set()
+        variantGroups[name].add(val)
+      }
+    }
+  }
+  const variants = Object.entries(variantGroups).map(([prop, vals]) => ({
+    property: prop,
+    values: Array.from(vals),
+  }))
+
+  return { name, images, price: priceEur, stock, description, variants }
 }
 
 export async function GET(req: NextRequest) {
