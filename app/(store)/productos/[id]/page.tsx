@@ -163,6 +163,7 @@ export default async function ProductoDetailPage({ params }: Props) {
     priceModifier: v.price_modifier,
     stock: v.stock,
     aliexpressSkuId: v.sku ?? undefined,
+    sku_attr: (v as { sku_attr?: string }).sku_attr ?? undefined,
     properties: v.properties ?? undefined,
   }))
 

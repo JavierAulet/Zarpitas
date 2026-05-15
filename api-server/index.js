@@ -262,14 +262,53 @@ app.post('/order', async (req, res) => {
 
 // ─── Product ──────────────────────────────────────────────────────────────────
 
-app.get('/product/:id', async (req, res) => {
+app.get('/product/:id?', async (req, res) => {
+  const productId = req.params.id ?? req.query.id
+  const country = req.query.country ?? 'ES'
+  const language = req.query.language ?? 'es'
+  if (!productId) return res.status(400).json({ error: 'Missing product id' })
+
   try {
     const raw = await callAliExpress('aliexpress.ds.product.get', {
-      product_id: req.params.id,
-      local_country: 'ES',
-      local_language: 'es',
+      product_id: String(productId),
+      local_country: country,
+      local_language: language,
     })
-    res.json(raw)
+
+    const envelope = raw.aliexpress_ds_product_get_response ?? raw
+    const result = envelope?.result ?? {}
+
+    // Normalize to ae_item format that sync-product route expects
+    const skus = result.aeop_ae_product_s_k_us?.global_aeop_ae_product_sku ?? []
+    const images = (result.image_u_r_ls ?? '').split(';').filter(Boolean)
+
+    const normalized = {
+      result: {
+        ae_item_base_info_dto: {
+          subject: result.product_title ?? '',
+          detail: result.aeop_ae_description?.description ?? '',
+        },
+        ae_multimedia_info_dto: {
+          image_urls: images.join(';'),
+        },
+        ae_item_sku_info_dtos: {
+          ae_item_sku_info_d_t_o: skus.map((s) => ({
+            sku_id: String(s.id ?? ''),
+            sku_attr: s.sku_attr ?? '',
+            offer_sale_price: String(s.offer_sale_price ?? s.sku_price ?? '0'),
+            sku_available_stock: parseInt(String(s.ipm_sku_stock ?? '0'), 10),
+            ae_sku_property_dtos: {
+              ae_sku_property_d_t_o: (s.ae_sku_property_dtos?.ae_sku_property_d_t_o ?? []).map((p) => ({
+                sku_property_name: p.property_name ?? p.sku_property_name ?? '',
+                property_value_definition_name: p.property_value_definition_name ?? p.property_value_id_long_name ?? '',
+              })),
+            },
+          })),
+        },
+      },
+    }
+
+    res.json(normalized)
   } catch (err) {
     res.status(500).json({ error: err.message })
   }

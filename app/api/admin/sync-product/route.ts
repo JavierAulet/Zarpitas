@@ -25,6 +25,7 @@ interface SkuProperty {
 
 interface SkuDto {
   sku_id?: string
+  sku_attr?: string
   offer_sale_price?: string
   sku_available_stock?: number
   ae_sku_property_dtos?: { ae_sku_property_d_t_o?: SkuProperty[] }
@@ -55,6 +56,7 @@ function parseVpsResponse(raw: {
     .filter((s) => s.sku_id)
     .map((s) => ({
       sku_id: s.sku_id!,
+      sku_attr: s.sku_attr ?? '',
       price: parseFloat((parseFloat(s.offer_sale_price ?? '0') * USD_TO_EUR).toFixed(2)),
       stock: s.sku_available_stock ?? 0,
       properties: (s.ae_sku_property_dtos?.ae_sku_property_d_t_o ?? [])
@@ -140,6 +142,7 @@ export async function POST(req: NextRequest) {
         product_id,
         name: s.properties.map((p) => p.value).join(' / '),
         sku: s.sku_id,
+        sku_attr: s.sku_attr || null,
         price_modifier: parseFloat((s.price * ratio - newSalePrice).toFixed(2)),
         stock: s.stock,
         active: true,

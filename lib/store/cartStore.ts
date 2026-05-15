@@ -52,6 +52,7 @@ export const useCartStore = create<CartState>()(
                 variantId: variant?.id,
                 variantName: variant?.name,
                 aliexpressSkuId: variant?.aliexpressSkuId,
+                sku_attr: variant?.sku_attr,
               },
             ],
           }

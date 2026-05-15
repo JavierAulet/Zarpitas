@@ -28,6 +28,7 @@ export interface ProductVariant {
   priceModifier: number
   stock: number
   aliexpressSkuId?: string
+  sku_attr?: string
   properties?: VariantProperty[]
 }
 
@@ -52,6 +53,7 @@ export interface CartItem {
   variantId?: string
   variantName?: string
   aliexpressSkuId?: string
+  sku_attr?: string
 }
 
 export interface Testimonial {
