@@ -16,11 +16,18 @@ export interface Product {
   stock?: number
 }
 
+export interface VariantProperty {
+  name: string
+  value: string
+}
+
 export interface ProductVariant {
   id: string
   name: string
   priceModifier: number
   stock: number
+  aliexpressSkuId?: string
+  properties?: VariantProperty[]
 }
 
 export interface CartItem {
@@ -43,6 +50,7 @@ export interface CartItem {
   quantity: number
   variantId?: string
   variantName?: string
+  aliexpressSkuId?: string
 }
 
 export interface Testimonial {

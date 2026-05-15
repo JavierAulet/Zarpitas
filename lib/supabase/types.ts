@@ -52,6 +52,8 @@ export interface OrderItem {
   price: number
   quantity: number
   image: string
+  aliexpress_id?: string
+  aliexpressSkuId?: string
 }
 
 export interface ShippingAddress {
@@ -134,6 +136,11 @@ export interface BlogPostInsert {
   published_at?: string | null
 }
 
+export interface VariantProperty {
+  name: string
+  value: string
+}
+
 export interface ProductVariantRow {
   id: string
   product_id: string
@@ -143,6 +150,7 @@ export interface ProductVariantRow {
   stock: number
   active: boolean
   sort_order: number
+  properties: VariantProperty[] | null
   created_at: string
 }
 
@@ -154,6 +162,7 @@ export interface ProductVariantInsert {
   stock?: number
   active?: boolean
   sort_order?: number
+  properties?: VariantProperty[] | null
 }
 
 export interface OrderInsert {

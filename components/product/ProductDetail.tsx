@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -20,9 +20,6 @@ export default function ProductDetail({ product, variants = [] }: ProductDetailP
   const [selectedImage, setSelectedImage] = useState(0)
   const [quantity, setQuantity] = useState(1)
   const [added, setAdded] = useState(false)
-  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(
-    variants.length > 0 ? variants[0] : null
-  )
 
   const addItem = useCartStore((state) => state.addItem)
   const openCart = useUIStore((state) => state.openCart)
@@ -31,11 +28,79 @@ export default function ProductDetail({ product, variants = [] }: ProductDetailP
   const images = (product.images?.length ? product.images : product.image ? [product.image] : []) as string[]
   const hasImages = images.length > 0
 
+  // ── Variant selection ──────────────────────────────────────────────────────
+
+  // Detect if variants use AliExpress-style property groups (Color, Talla, etc.)
+  const hasPropertyGroups = variants.some((v) => (v.properties?.length ?? 0) > 0)
+
+  // Build property groups: { Color: ['Rojo', 'Azul'], Talla: ['S', 'M'] }
+  const propertyGroups = useMemo(() => {
+    if (!hasPropertyGroups) return []
+    const groups: Record<string, string[]> = {}
+    for (const v of variants) {
+      for (const p of v.properties ?? []) {
+        if (!groups[p.name]) groups[p.name] = []
+        if (!groups[p.name].includes(p.value)) groups[p.name].push(p.value)
+      }
+    }
+    return Object.entries(groups).map(([name, values]) => ({ name, values }))
+  }, [variants, hasPropertyGroups])
+
+  // Selected value per property group
+  const [selectedProps, setSelectedProps] = useState<Record<string, string>>(() =>
+    Object.fromEntries(propertyGroups.map((g) => [g.name, g.values[0] ?? '']))
+  )
+
+  // Flat variant selection (manual/admin-created variants without properties)
+  const [flatVariantId, setFlatVariantId] = useState<string | null>(
+    !hasPropertyGroups && variants.length > 0 ? variants[0].id : null
+  )
+
+  // Derived selected variant
+  const selectedVariant = useMemo<ProductVariant | null>(() => {
+    if (hasPropertyGroups) {
+      const entries = Object.entries(selectedProps)
+      return (
+        variants.find((v) =>
+          entries.every(([name, val]) =>
+            v.properties?.some((p) => p.name === name && p.value === val)
+          )
+        ) ?? null
+      )
+    }
+    return variants.find((v) => v.id === flatVariantId) ?? null
+  }, [hasPropertyGroups, selectedProps, flatVariantId, variants])
+
+  // Check if a specific option value is available given current selections
+  function isOptionAvailable(propName: string, propValue: string): boolean {
+    return variants.some((v) => {
+      if ((v.stock ?? 0) === 0) return false
+      if (!v.properties?.some((p) => p.name === propName && p.value === propValue)) return false
+      for (const [otherName, otherValue] of Object.entries(selectedProps)) {
+        if (otherName === propName) continue
+        if (!v.properties?.some((p) => p.name === otherName && p.value === otherValue)) return false
+      }
+      return true
+    })
+  }
+
+  // ── Prices & stock ─────────────────────────────────────────────────────────
+
   const effectivePrice = product.price + (selectedVariant?.priceModifier ?? 0)
-  const outOfStock = selectedVariant ? selectedVariant.stock === 0 : (product.stock ?? 1) === 0
+  const outOfStock = selectedVariant
+    ? selectedVariant.stock === 0
+    : variants.length === 0
+    ? (product.stock ?? 1) === 0
+    : true // property variant selected but no exact match yet
+
+  const discount = product.originalPrice
+    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+    : null
+
+  // ── Cart actions ───────────────────────────────────────────────────────────
 
   const handleAddToCart = () => {
-    if (outOfStock) return
+    if (outOfStock || !selectedVariant && hasPropertyGroups) return
     addItem(product, quantity, selectedVariant ?? undefined)
     setAdded(true)
     openCart()
@@ -48,15 +113,10 @@ export default function ProductDetail({ product, variants = [] }: ProductDetailP
     router.push('/checkout')
   }
 
-  const discount = product.originalPrice
-    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
-    : null
-
   return (
     <div className="grid lg:grid-cols-2 gap-10 lg:gap-16">
       {/* Image gallery */}
       <div className="flex flex-col gap-4">
-        {/* Main image */}
         <div className="relative aspect-square rounded-4xl overflow-hidden bg-cream-warm border-2 border-cream-deep">
           <AnimatePresence mode="wait">
             <motion.div
@@ -100,9 +160,8 @@ export default function ProductDetail({ product, variants = [] }: ProductDetailP
           )}
         </div>
 
-        {/* Thumbnails */}
         {images.length > 1 && (
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-wrap">
             {images.map((img, i) => (
               <button
                 key={i}
@@ -154,8 +213,44 @@ export default function ProductDetail({ product, variants = [] }: ProductDetailP
           )}
         </div>
 
-        {/* Variant selector */}
-        {variants.length > 0 && (
+        {/* Variant selector — property groups (AliExpress style) */}
+        {hasPropertyGroups && propertyGroups.map((group) => (
+          <div key={group.name} className="mb-4">
+            <p className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">
+              {group.name}:{' '}
+              <span className="text-orange normal-case font-semibold">
+                {selectedProps[group.name] ?? '—'}
+              </span>
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {group.values.map((val) => {
+                const available = isOptionAvailable(group.name, val)
+                const active = selectedProps[group.name] === val
+                return (
+                  <button
+                    key={val}
+                    onClick={() => {
+                      if (!available) return
+                      setSelectedProps((prev) => ({ ...prev, [group.name]: val }))
+                    }}
+                    className={`px-4 py-2 rounded-full text-sm font-bold border-2 transition-all duration-200 ${
+                      active
+                        ? 'border-orange bg-orange text-white'
+                        : !available
+                        ? 'border-cream-deep bg-cream-warm text-text-muted line-through cursor-not-allowed opacity-50'
+                        : 'border-cream-deep bg-white text-text-primary hover:border-orange/50'
+                    }`}
+                  >
+                    {val}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ))}
+
+        {/* Variant selector — flat (manual admin variants) */}
+        {!hasPropertyGroups && variants.length > 0 && (
           <div className="mb-5">
             <p className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">
               Variante: <span className="text-orange">{selectedVariant?.name}</span>
@@ -164,10 +259,10 @@ export default function ProductDetail({ product, variants = [] }: ProductDetailP
               {variants.map((v) => (
                 <button
                   key={v.id}
-                  onClick={() => setSelectedVariant(v)}
+                  onClick={() => setFlatVariantId(v.id)}
                   disabled={v.stock === 0}
                   className={`px-4 py-2 rounded-full text-sm font-bold border-2 transition-all duration-200 ${
-                    selectedVariant?.id === v.id
+                    flatVariantId === v.id
                       ? 'border-orange bg-orange text-white'
                       : v.stock === 0
                       ? 'border-cream-deep bg-cream-warm text-text-muted line-through cursor-not-allowed'
@@ -179,10 +274,17 @@ export default function ProductDetail({ product, variants = [] }: ProductDetailP
                 </button>
               ))}
             </div>
-            {selectedVariant && selectedVariant.stock > 0 && selectedVariant.stock < 10 && (
-              <p className="text-xs text-orange font-bold mt-1.5">⚡ Solo {selectedVariant.stock} en stock</p>
-            )}
           </div>
+        )}
+
+        {/* Stock warning */}
+        {selectedVariant && selectedVariant.stock > 0 && selectedVariant.stock < 10 && (
+          <p className="text-xs text-orange font-bold mb-3">⚡ Solo {selectedVariant.stock} en stock</p>
+        )}
+
+        {/* No match for selected combination */}
+        {hasPropertyGroups && !selectedVariant && (
+          <p className="text-xs text-text-muted mb-3">Selecciona todas las opciones para continuar</p>
         )}
 
         {/* Description */}
@@ -218,7 +320,13 @@ export default function ProductDetail({ product, variants = [] }: ProductDetailP
             </button>
           </div>
 
-          <Button onClick={handleAddToCart} fullWidth size="lg" className="gap-2" disabled={outOfStock}>
+          <Button
+            onClick={handleAddToCart}
+            fullWidth
+            size="lg"
+            className="gap-2"
+            disabled={outOfStock || (hasPropertyGroups && !selectedVariant)}
+          >
             {added ? (
               <><Check size={18} /> ¡Añadido!</>
             ) : outOfStock ? (
@@ -229,7 +337,14 @@ export default function ProductDetail({ product, variants = [] }: ProductDetailP
           </Button>
         </div>
 
-        <Button onClick={handleBuyNow} variant="secondary" fullWidth size="lg" className="gap-2 mb-5" disabled={outOfStock}>
+        <Button
+          onClick={handleBuyNow}
+          variant="secondary"
+          fullWidth
+          size="lg"
+          className="gap-2 mb-5"
+          disabled={outOfStock || (hasPropertyGroups && !selectedVariant)}
+        >
           <Zap size={18} />
           Comprar ahora
         </Button>

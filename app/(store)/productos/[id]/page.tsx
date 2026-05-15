@@ -162,6 +162,8 @@ export default async function ProductoDetailPage({ params }: Props) {
     name: v.name,
     priceModifier: v.price_modifier,
     stock: v.stock,
+    aliexpressSkuId: v.sku ?? undefined,
+    properties: v.properties ?? undefined,
   }))
 
   if (!product) notFound()

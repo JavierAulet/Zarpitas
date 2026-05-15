@@ -130,6 +130,7 @@ function CheckoutInner({ paymentIntentId, grandTotal, shipping, subtotal, discou
               quantity: i.quantity,
               image: i.image ?? null,
               aliexpress_id: i.aliexpressId ?? null,
+              aliexpressSkuId: i.aliexpressSkuId ?? null,
             })),
             subtotal,
             shipping,

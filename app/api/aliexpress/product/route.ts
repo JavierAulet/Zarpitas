@@ -23,6 +23,7 @@ interface SkuProperty {
 }
 
 interface SkuDto {
+  sku_id?: string
   offer_sale_price?: string
   sku_available_stock?: number
   ae_sku_property_dtos?: {
@@ -75,11 +76,11 @@ function parseVpsResponse(raw: VpsResponse) {
   const variantGroups: Record<string, Set<string>> = {}
   for (const sku of skuContainer) {
     for (const prop of sku.ae_sku_property_dtos?.ae_sku_property_d_t_o ?? []) {
-      const name = prop.sku_property_name ?? ''
+      const propName = prop.sku_property_name ?? ''
       const val = prop.property_value_definition_name ?? ''
-      if (name && val) {
-        if (!variantGroups[name]) variantGroups[name] = new Set()
-        variantGroups[name].add(val)
+      if (propName && val) {
+        if (!variantGroups[propName]) variantGroups[propName] = new Set()
+        variantGroups[propName].add(val)
       }
     }
   }
@@ -88,7 +89,25 @@ function parseVpsResponse(raw: VpsResponse) {
     values: Array.from(vals),
   }))
 
-  return { name, images, price: priceEur, stock, description, variants }
+  // Full SKU list with IDs — used to save as product_variants rows
+  const skus = skuContainer
+    .filter((s) => s.sku_id)
+    .map((s) => {
+      const priceUsd = parseFloat(s.offer_sale_price ?? '0')
+      return {
+        sku_id: s.sku_id!,
+        price: parseFloat((priceUsd * USD_TO_EUR).toFixed(2)),
+        stock: s.sku_available_stock ?? 0,
+        properties: (s.ae_sku_property_dtos?.ae_sku_property_d_t_o ?? [])
+          .filter((p) => p.sku_property_name && p.property_value_definition_name)
+          .map((p) => ({
+            name: p.sku_property_name!,
+            value: p.property_value_definition_name!,
+          })),
+      }
+    })
+
+  return { name, images, price: priceEur, stock, description, variants, skus }
 }
 
 export async function GET(req: NextRequest) {

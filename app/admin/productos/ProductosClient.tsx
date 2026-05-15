@@ -9,6 +9,7 @@ import {
   Package, Link2, Layers, ChevronRight, BarChart2,
 } from 'lucide-react'
 import { createProduct } from '@/lib/actions/products'
+import { createVariant } from '@/lib/actions/variants'
 import ToggleActive from '@/components/admin/ToggleActive'
 import DeleteProduct from '@/components/admin/DeleteProduct'
 import type { ProductRow } from '@/lib/supabase/types'
@@ -53,6 +54,13 @@ const STATUS_COLORS: Record<string, string> = {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+interface AliSku {
+  sku_id: string
+  price: number
+  stock: number
+  properties: Array<{ name: string; value: string }>
+}
+
 interface AliProduct {
   name: string
   images: string[]
@@ -60,6 +68,7 @@ interface AliProduct {
   stock: number
   description: string
   variants?: Array<{ property: string; values: string[] }>
+  skus?: AliSku[]
   error?: string
 }
 
@@ -101,6 +110,29 @@ async function saveProduct(
     active: false,
     sku: null,
   })
+
+  // Save AliExpress SKUs as selectable variants
+  const skus = product.skus ?? []
+  const skusWithProps = skus.filter((s) => s.properties.length > 0)
+  if (skusWithProps.length > 0) {
+    for (let i = 0; i < skusWithProps.length; i++) {
+      const sku = skusWithProps[i]
+      const label = sku.properties.map((p) => p.value).join(' / ')
+      const skuSalePrice = sku.price > 0 ? sku.price * 2.5 : overrides.salePrice
+      const priceModifier = parseFloat((skuSalePrice - overrides.salePrice).toFixed(2))
+      await createVariant({
+        product_id: id,
+        name: label,
+        sku: sku.sku_id,
+        price_modifier: priceModifier,
+        stock: sku.stock,
+        active: true,
+        sort_order: i,
+        properties: sku.properties,
+      })
+    }
+  }
+
   return id
 }
 

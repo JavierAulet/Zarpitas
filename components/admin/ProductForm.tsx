@@ -217,6 +217,7 @@ export default function ProductForm({ mode, product, variants: initialVariants =
         stock: parseInt(newVariantStock) || 0,
         active: true,
         sort_order: prev.length,
+        properties: null,
         created_at: new Date().toISOString(),
       }])
       setNewVariantName('')

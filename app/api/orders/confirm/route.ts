@@ -94,13 +94,20 @@ export async function POST(req: NextRequest) {
       const apiUrl = process.env.ALIEXPRESS_API_URL
       if (!apiUrl) throw new Error('ALIEXPRESS_API_URL not configured')
 
+      const aliexpressSkuId = (item as { aliexpressSkuId?: string }).aliexpressSkuId
+      const productItem: Record<string, unknown> = {
+        product_id: parseInt(aliexpressProductId, 10),
+        product_count: item.quantity,
+      }
+      if (aliexpressSkuId) productItem.sku_id = aliexpressSkuId
+
       const res = await fetch(`${apiUrl}/order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           out_order_id: `${order_id}-${item.id}`,
           logistics_address,
-          product_items: [{ product_id: parseInt(aliexpressProductId, 10), product_count: item.quantity }],
+          product_items: [productItem],
         }),
       })
       const result = await res.json()

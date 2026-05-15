@@ -51,6 +51,7 @@ export const useCartStore = create<CartState>()(
                 quantity,
                 variantId: variant?.id,
                 variantName: variant?.name,
+                aliexpressSkuId: variant?.aliexpressSkuId,
               },
             ],
           }
