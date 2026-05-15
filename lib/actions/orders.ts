@@ -37,9 +37,14 @@ export async function getOrders() {
 
 export async function updateOrderStatus(id: string, status: OrderStatus) {
   const db = createServerClient()
+  const clearReview = ['processing', 'shipped', 'delivered'].includes(status)
   const { error } = await db
     .from('orders')
-    .update({ status, updated_at: new Date().toISOString() })
+    .update({
+      status,
+      updated_at: new Date().toISOString(),
+      ...(clearReview ? { needs_manual_review: false } : {}),
+    })
     .eq('id', id)
   if (error) throw new Error(error.message)
 
