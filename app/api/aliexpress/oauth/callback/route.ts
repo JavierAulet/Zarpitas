@@ -31,35 +31,37 @@ export async function GET(req: NextRequest) {
 
   const appKey = process.env.ALIEXPRESS_APP_KEY ?? '533884'
   const appSecret = (process.env.ALIEXPRESS_APP_SECRET ?? '').trim()
-  const redirectUri = process.env.ALIEXPRESS_REDIRECT_URI ?? 'https://zarpitas.es/api/aliexpress/oauth/callback'
 
-  console.log('[OAuth callback] Config — appKey:', appKey, '| appSecret length:', appSecret.length, '| redirectUri:', redirectUri)
+  console.log('[OAuth callback] Config — appKey:', appKey, '| appSecret length:', appSecret.length)
 
   if (!appSecret) {
     console.error('[OAuth callback] ALIEXPRESS_APP_SECRET env var is not set')
     return NextResponse.redirect(new URL('/admin/configuracion?oauth=error&reason=no_secret', req.url))
   }
 
-  // Build params for signing (without sign itself)
+  // Params to sign: sorted alphabetically, concatenated as key+value, HMAC-SHA256 with appSecret
   const timestamp = Date.now().toString()
   const params: Record<string, string> = {
     app_key: appKey,
     app_secret: appSecret,
     code,
     grant_type: 'authorization_code',
-    redirect_uri: redirectUri,
     sign_method: 'sha256',
     timestamp,
   }
 
   const signature = sign(params, appSecret)
-  console.log('[OAuth callback] Params to sign:', Object.keys(params).sort().join(', '))
-  console.log('[OAuth callback] Signature computed:', `${signature.slice(0, 8)}...`)
+
+  // Log full request for debugging
+  const sortedParamStr = Object.keys(params).sort().map((k) => `${k}=${params[k]}`).join('&')
+  console.log('[OAuth callback] Params to sign (sorted):', sortedParamStr.replace(appSecret, '***SECRET***'))
+  console.log('[OAuth callback] Computed signature:', signature)
 
   const body = new URLSearchParams({ ...params, sign: signature })
   const tokenUrl = 'https://api-sg.aliexpress.com/rest/auth/token/create'
 
   console.log('[OAuth callback] POSTing to:', tokenUrl)
+  console.log('[OAuth callback] Full body (redacted):', body.toString().replace(encodeURIComponent(appSecret), '***SECRET***'))
 
   let rawText: string
   let httpStatus: number
