@@ -1,3 +1,4 @@
+require('dotenv').config()
 const express = require('express')
 const { DropshipperClient } = require('ae_sdk')
 
@@ -159,6 +160,7 @@ app.get('/tracking/:order_id', async (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`[zarpitas-api] Listening on port ${PORT}`)
-  console.log(`[zarpitas-api] APP_KEY=${APP_KEY ? APP_KEY : 'NOT SET'}`)
-  console.log(`[zarpitas-api] ACCESS_TOKEN=${ACCESS_TOKEN ? ACCESS_TOKEN.slice(0, 8) + '...' : 'NOT SET'}`)
+  console.log('[zarpitas-api] APP_KEY=', process.env.ALIEXPRESS_APP_KEY ? 'SET' : 'NOT SET')
+  console.log('[zarpitas-api] APP_SECRET=', process.env.ALIEXPRESS_APP_SECRET ? 'SET' : 'NOT SET')
+  console.log('[zarpitas-api] ACCESS_TOKEN=', process.env.ALIEXPRESS_ACCESS_TOKEN ? 'SET' : 'NOT SET')
 })
