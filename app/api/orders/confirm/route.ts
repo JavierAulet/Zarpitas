@@ -97,7 +97,9 @@ export async function POST(req: NextRequest) {
       const apiUrl = process.env.ALIEXPRESS_API_URL
       if (!apiUrl) throw new Error('ALIEXPRESS_API_URL not configured')
 
-      const skuAttr = typedItem.sku_attr ?? typedItem.aliexpressSkuId
+      // sku_attr must be in "14:xxx" format — numeric aliexpressSkuId is a sku_id, not sku_attr
+      const rawSku = typedItem.sku_attr ?? typedItem.aliexpressSkuId
+      const skuAttr = rawSku?.includes(':') ? rawSku : undefined
 
       const res = await fetch(`${apiUrl}/order`, {
         method: 'POST',
