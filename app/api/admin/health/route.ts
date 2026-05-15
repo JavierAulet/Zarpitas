@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
+import { getOrders } from '@/lib/actions/orders'
 
 export async function GET(req: NextRequest) {
   const cookie = cookies().get('zarpitas_admin')
@@ -49,6 +50,15 @@ export async function GET(req: NextRequest) {
       })
       const data = await res.json()
       return NextResponse.json({ count: Array.isArray(data) ? data.length : 0, orders: data })
+    } catch (e) {
+      return NextResponse.json({ error: String(e) }, { status: 500 })
+    }
+  }
+
+  if (service === 'orders-sdk') {
+    try {
+      const orders = await getOrders()
+      return NextResponse.json({ count: orders.length, ids: orders.map((o) => o.id) })
     } catch (e) {
       return NextResponse.json({ error: String(e) }, { status: 500 })
     }
