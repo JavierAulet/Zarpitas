@@ -66,8 +66,11 @@ app.post('/order', async (req, res) => {
   const orderPayload = { out_id, logistics_address, product_items }
 
   const attempts = [
+    // DS API — la API pidió este param key cuando enviamos param_place_ds_order_request
+    { method: 'aliexpress.ds.order.create',    paramKey: 'param_place_order_request4_open_api_d_t_o' },
+    // DS API — el param key "oficial" de la docs
     { method: 'aliexpress.ds.order.create',    paramKey: 'param_place_ds_order_request' },
-    { method: 'aliexpress.trade.order.create', paramKey: 'param_place_order_request4_open_api_d_t_o' },
+    // Trade API con param0 — llega al contenido pero pide address_id (no DS)
     { method: 'aliexpress.trade.order.create', paramKey: 'param0' },
   ]
 
