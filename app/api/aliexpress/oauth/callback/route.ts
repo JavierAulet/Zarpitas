@@ -1,8 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createHash, createHmac } from 'crypto'
+import { createHash } from 'crypto'
 import { createServiceClient } from '@/lib/supabase/server'
 
-// Handles all known AliExpress response shapes
+const TOKEN_URL = 'https://api-sg.aliexpress.com/rest/auth/token/create'
+const TOKEN_PATH = '/auth/token/create'
+
+function sign(params: Record<string, string>, secret: string): string {
+  const sortedStr = Object.keys(params)
+    .sort()
+    .map((k) => `${k}${params[k]}`)
+    .join('')
+  return createHash('sha256')
+    .update(secret + TOKEN_PATH + sortedStr + secret)
+    .digest('hex')
+    .toUpperCase()
+}
+
 function extractTokenFields(data: Record<string, unknown>): {
   access_token?: string
   refresh_token?: string
@@ -18,60 +31,6 @@ function extractTokenFields(data: Record<string, unknown>): {
     refresh_token: payload.refresh_token as string | undefined,
     expire_time: payload.expire_time as number | undefined,
   }
-}
-
-const TOKEN_URL = 'https://api-sg.aliexpress.com/rest/auth/token/create'
-
-async function tryTokenExchange(
-  label: string,
-  sign: string,
-  params: Record<string, string>,
-  asJson: boolean
-): Promise<{ ok: boolean; status: number; rawText: string; data?: Record<string, unknown> }> {
-  const payload = { ...params, sign }
-  const isJson = asJson
-
-  console.log(`[OAuth callback] ── Attempt: ${label} ──────────────────────────`)
-  console.log(`[OAuth callback] sign value: ${sign}`)
-  console.log(`[OAuth callback] content-type: ${isJson ? 'application/json' : 'application/x-www-form-urlencoded'}`)
-
-  const res = await fetch(TOKEN_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': isJson
-        ? 'application/json'
-        : 'application/x-www-form-urlencoded;charset=utf-8',
-    },
-    body: isJson ? JSON.stringify(payload) : new URLSearchParams(payload).toString(),
-  })
-
-  const rawText = await res.text()
-  console.log(`[OAuth callback] [${label}] HTTP status: ${res.status}`)
-  console.log(`[OAuth callback] [${label}] Raw response: ${rawText}`)
-
-  if (!res.ok) return { ok: false, status: res.status, rawText }
-
-  let data: Record<string, unknown>
-  try {
-    data = JSON.parse(rawText)
-  } catch {
-    console.error(`[OAuth callback] [${label}] JSON parse failed`)
-    return { ok: false, status: res.status, rawText }
-  }
-
-  if (data.error_response) {
-    console.error(`[OAuth callback] [${label}] error_response:`, JSON.stringify(data.error_response))
-    return { ok: false, status: res.status, rawText, data }
-  }
-
-  const { access_token } = extractTokenFields(data)
-  if (!access_token) {
-    console.error(`[OAuth callback] [${label}] No access_token in response`)
-    return { ok: false, status: res.status, rawText, data }
-  }
-
-  console.log(`[OAuth callback] [${label}] ✓ SUCCESS — access_token found`)
-  return { ok: true, status: res.status, rawText, data }
 }
 
 export async function GET(req: NextRequest) {
@@ -116,48 +75,65 @@ export async function GET(req: NextRequest) {
     timestamp,
   }
 
+  const signature = sign(params, appSecret)
+
   const sortedStr = Object.keys(params).sort().map((k) => `${k}${params[k]}`).join('')
+  console.log('[OAuth callback] strToSign: SECRET +', TOKEN_PATH, '+ sortedParams + SECRET')
+  console.log('[OAuth callback] sortedParams (code redacted):', sortedStr.replace(code, `${code.slice(0, 6)}...`))
+  console.log('[OAuth callback] signature:', signature)
 
-  // Compute all three signature variants upfront
-  const signA = createHash('sha256').update(sortedStr).digest('hex').toUpperCase()
-  const signB = createHmac('sha256', appSecret).update(sortedStr).digest('hex').toUpperCase()
-  const signC = createHash('sha256').update(appSecret + sortedStr + appSecret).digest('hex').toUpperCase()
+  const body = new URLSearchParams({ ...params, sign: signature })
+  console.log('[OAuth callback] POST', TOKEN_URL)
 
-  console.log('[OAuth callback] sortedStr (code redacted):', sortedStr.replace(code, `${code.slice(0, 6)}...`))
-  console.log('[OAuth callback] signA (SHA256 plain):        ', signA)
-  console.log('[OAuth callback] signB (HMAC-SHA256):         ', signB)
-  console.log('[OAuth callback] signC (SHA256 secret-wrap):  ', signC)
-
-  // Try all combinations in order: form-encoded A, B, C — then JSON with A
-  const attempts: Array<[string, string, boolean]> = [
-    ['A-form (SHA256 plain)',       signA, false],
-    ['B-form (HMAC-SHA256)',        signB, false],
-    ['C-form (SHA256 secret-wrap)', signC, false],
-    ['A-json (SHA256 plain, JSON)', signA, true],
-  ]
-
-  let lastRaw = ''
-  let successData: Record<string, unknown> | undefined
-
-  for (const [label, sign, asJson] of attempts) {
-    const result = await tryTokenExchange(label, sign, params, asJson)
-    lastRaw = result.rawText
-    if (result.ok && result.data) {
-      successData = result.data
-      break
-    }
+  let rawText: string
+  let httpStatus: number
+  try {
+    const res = await fetch(TOKEN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8' },
+      body: body.toString(),
+    })
+    httpStatus = res.status
+    rawText = await res.text()
+  } catch (err) {
+    console.error('[OAuth callback] Fetch error:', err)
+    return NextResponse.redirect(new URL('/admin/configuracion?oauth=error&reason=fetch_failed', req.url))
   }
 
-  if (!successData) {
-    console.error('[OAuth callback] All attempts failed. Last raw response:', lastRaw.slice(0, 300))
+  console.log('[OAuth callback] HTTP status:', httpStatus)
+  console.log('[OAuth callback] Raw response:', rawText)
+
+  let data: Record<string, unknown>
+  try {
+    data = JSON.parse(rawText)
+  } catch {
+    console.error('[OAuth callback] JSON parse failed')
+    return NextResponse.redirect(new URL('/admin/configuracion?oauth=error&reason=parse_error', req.url))
+  }
+
+  console.log('[OAuth callback] Response keys:', Object.keys(data).join(', '))
+
+  if (data.error_response) {
+    const errObj = data.error_response as Record<string, unknown>
+    const errMsg = String(errObj.msg ?? errObj.error_code ?? 'unknown')
+    console.error('[OAuth callback] error_response:', JSON.stringify(errObj))
     return NextResponse.redirect(
-      new URL(`/admin/configuracion?oauth=error&reason=all_attempts_failed&raw=${encodeURIComponent(lastRaw.slice(0, 200))}`, req.url)
+      new URL(`/admin/configuracion?oauth=error&reason=ae_error&msg=${encodeURIComponent(errMsg)}`, req.url)
     )
   }
 
-  const { access_token, refresh_token, expire_time } = extractTokenFields(successData)
+  const { access_token, refresh_token, expire_time } = extractTokenFields(data)
+
+  console.log('[OAuth callback] access_token found:', !!access_token)
+  console.log('[OAuth callback] refresh_token found:', !!refresh_token)
+  console.log('[OAuth callback] expire_time:', expire_time)
+
   if (!access_token) {
-    return NextResponse.redirect(new URL('/admin/configuracion?oauth=error&reason=no_token', req.url))
+    const raw = JSON.stringify(data).slice(0, 300)
+    console.error('[OAuth callback] No access_token. Full response:', raw)
+    return NextResponse.redirect(
+      new URL(`/admin/configuracion?oauth=error&reason=no_token&raw=${encodeURIComponent(raw)}`, req.url)
+    )
   }
 
   const expiresAt = expire_time
