@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { getProducts } from '@/lib/actions/products'
 import { getOrders } from '@/lib/actions/orders'
 import { Package, ShoppingBag, TrendingUp, Clock, CheckCircle, AlertCircle } from 'lucide-react'
