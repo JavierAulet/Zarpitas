@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createHmac } from 'crypto'
+import { createHash } from 'crypto'
 import { createServiceClient } from '@/lib/supabase/server'
 
+// AliExpress token endpoint signature:
+// SHA256( SECRET + key1val1key2val2... + SECRET ), params sorted A-Z
+// app_secret is NOT sent in the POST body — only used to wrap the string
 function sign(params: Record<string, string>, secret: string): string {
-  const concatenated = Object.keys(params)
+  const sorted = Object.keys(params)
     .sort()
     .map((k) => `${k}${params[k]}`)
     .join('')
-  return createHmac('sha256', secret).update(concatenated).digest('hex').toUpperCase()
+  return createHash('sha256').update(secret + sorted + secret).digest('hex').toUpperCase()
 }
 
 // Handles all known AliExpress response shapes
@@ -64,9 +67,9 @@ export async function GET(req: NextRequest) {
   }
 
   const timestamp = Date.now().toString()
+  // app_secret is NOT sent in the body — only used to wrap the signature string
   const params: Record<string, string> = {
     app_key: appKey,
-    app_secret: appSecret,
     code,
     grant_type: 'authorization_code',
     sign_method: 'sha256',
@@ -75,11 +78,9 @@ export async function GET(req: NextRequest) {
 
   const signature = sign(params, appSecret)
 
-  const redactedParams = Object.keys(params)
-    .sort()
-    .map((k) => `${k}=${k === 'app_secret' ? '***' : params[k]}`)
-    .join('&')
-  console.log('[OAuth callback] Params to sign (sorted, secret redacted):', redactedParams)
+  const sortedParamStr = Object.keys(params).sort().map((k) => `${k}=${params[k]}`).join('&')
+  console.log('[OAuth callback] Params to sign (sorted):', sortedParamStr)
+  console.log('[OAuth callback] Sign input: SECRET +', sortedParamStr.replace(code, `${code.slice(0, 6)}...`), '+ SECRET')
   console.log('[OAuth callback] Signature:', signature)
 
   const body = new URLSearchParams({ ...params, sign: signature })
