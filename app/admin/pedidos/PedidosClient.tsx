@@ -40,6 +40,8 @@ function OrderModal({ order, onClose }: { order: OrderRow; onClose: () => void }
   const [saving, setSaving] = useState(false)
   const [tracking, setTracking] = useState<{ events: { event_date: string; event_desc: string; address: string }[] } | null>(null)
   const [fetchingTracking, setFetchingTracking] = useState(false)
+  const [retrying, setRetrying] = useState(false)
+  const [retryResult, setRetryResult] = useState<{ ok: boolean; message: string } | null>(null)
 
   async function handleStatusChange(newStatus: OrderStatus) {
     setSaving(true)
@@ -47,6 +49,38 @@ function OrderModal({ order, onClose }: { order: OrderRow; onClose: () => void }
     setStatus(newStatus)
     setSaving(false)
     router.refresh()
+  }
+
+  async function handleRetryFulfillment() {
+    setRetrying(true)
+    setRetryResult(null)
+    try {
+      const res = await fetch('/api/orders/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: order.id }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        const newStatus = data.status as OrderStatus
+        setStatus(newStatus)
+        setRetryResult({
+          ok: true,
+          message: data.already_confirmed
+            ? 'El pedido ya estaba confirmado.'
+            : data.needs_manual_review
+            ? `Parcialmente procesado — estado: ${STATUS_LABELS[newStatus]}. Revisa AliExpress manualmente.`
+            : `¡Éxito! Pedido enviado a AliExpress — estado: ${STATUS_LABELS[newStatus]}`,
+        })
+        router.refresh()
+      } else {
+        setRetryResult({ ok: false, message: data.error ?? 'Error desconocido al reintentar.' })
+      }
+    } catch {
+      setRetryResult({ ok: false, message: 'Error de red al contactar el servidor.' })
+    } finally {
+      setRetrying(false)
+    }
   }
 
   async function fetchTracking() {
@@ -246,6 +280,26 @@ function OrderModal({ order, onClose }: { order: OrderRow; onClose: () => void }
 
         {/* Footer — status actions */}
         <div className="px-6 py-4 border-t border-zinc-800">
+
+          {/* Retry fulfillment */}
+          {order.needs_manual_review && (
+            <div className="mb-4">
+              <button
+                onClick={handleRetryFulfillment}
+                disabled={retrying}
+                className="flex items-center gap-2 w-full justify-center bg-orange hover:bg-orange/90 text-white font-bold px-4 py-2.5 rounded-xl text-sm transition-colors disabled:opacity-50 mb-2"
+              >
+                <RefreshCw size={14} className={retrying ? 'animate-spin' : ''} />
+                {retrying ? 'Reintentando...' : 'Reintentar fulfillment en AliExpress'}
+              </button>
+              {retryResult && (
+                <p className={`text-xs px-3 py-2 rounded-lg ${retryResult.ok ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                  {retryResult.ok ? '✓' : '✗'} {retryResult.message}
+                </p>
+              )}
+            </div>
+          )}
+
           <p className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-2">Cambiar estado</p>
           <div className="flex flex-wrap gap-2">
             {ALL_STATUSES.map((s) => (
