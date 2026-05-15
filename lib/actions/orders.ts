@@ -1,5 +1,5 @@
 'use server'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, unstable_noStore as noStore } from 'next/cache'
 import { createServiceClient as createServerClient } from '@/lib/supabase/server'
 import { sendShippingNotification } from '@/lib/email'
 import type { OrderInsert, OrderStatus, OrderRow } from '@/lib/supabase/types'
@@ -25,6 +25,7 @@ export async function saveOrder(order: OrderInsert) {
 }
 
 export async function getOrders() {
+  noStore()
   const db = createServerClient()
   const { data, error } = await db
     .from('orders')
