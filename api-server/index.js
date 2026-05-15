@@ -105,7 +105,7 @@ function normalizeSpanishAddress(addr) {
   return {
     ...addr,
     address: removeAccents(addr.address ?? ''),
-    city: removeAccents(addr.city ?? mappedProvince),
+    city: mappedProvince,  // use mapped province as city — AliExpress validates city against known list
     province: mappedProvince,
     contact_person: removeAccents(addr.contact_person ?? addr.full_name ?? ''),
     full_name: removeAccents(addr.full_name ?? addr.contact_person ?? ''),
