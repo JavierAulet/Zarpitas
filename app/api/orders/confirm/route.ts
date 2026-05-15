@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { sendOrderConfirmation, sendAdminNewOrder } from '@/lib/email'
-import { createAliExpressOrder } from '@/lib/aliexpress/client'
 import type { OrderRow, AliExpressOrderRef } from '@/lib/supabase/types'
 
 function buildLogisticsAddress(order: OrderRow) {
@@ -94,18 +93,26 @@ export async function POST(req: NextRequest) {
     }
 
     try {
+      const apiUrl = process.env.ALIEXPRESS_API_URL
+      if (!apiUrl) throw new Error('ALIEXPRESS_API_URL not configured')
+
       const typedItem = item as { aliexpressSkuId?: string; sku_attr?: string }
       const skuAttr = typedItem.sku_attr ?? typedItem.aliexpressSkuId
 
-      const result = await createAliExpressOrder({
-        out_id: `ZAR-${order_id.slice(0, 8).toUpperCase()}-${item.id.slice(0, 4).toUpperCase()}`,
-        logistics_address,
-        product_items: [{
-          product_id: parseInt(aliexpressProductId, 10),
-          product_count: item.quantity,
-          ...(skuAttr ? { sku_attr: skuAttr } : {}),
-        }],
+      const res = await fetch(`${apiUrl}/order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          out_id: `ZAR-${order_id.slice(0, 8).toUpperCase()}-${item.id.slice(0, 4).toUpperCase()}`,
+          logistics_address,
+          product_items: [{
+            product_id: parseInt(aliexpressProductId, 10),
+            product_count: item.quantity,
+            ...(skuAttr ? { sku_attr: skuAttr } : {}),
+          }],
+        }),
       })
+      const result = await res.json()
 
       if (result.success && result.order_list?.length) {
         for (const ref of result.order_list) {
