@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createServiceClient } from '@/lib/supabase/server'
 
-const USD_TO_EUR = 0.92
+const USD_TO_EUR = 1 // AliExpress API returns prices in EUR when target_currency=EUR
 
 function stripHtml(html: string): string {
   return html
@@ -21,6 +21,7 @@ function stripHtml(html: string): string {
 interface SkuProperty {
   sku_property_name?: string
   property_value_definition_name?: string
+  sku_property_value?: string
 }
 
 interface SkuDto {
@@ -60,8 +61,8 @@ function parseVpsResponse(raw: {
       price: parseFloat((parseFloat(s.offer_sale_price ?? '0') * USD_TO_EUR).toFixed(2)),
       stock: s.sku_available_stock ?? 0,
       properties: (s.ae_sku_property_dtos?.ae_sku_property_d_t_o ?? [])
-        .filter((p) => p.sku_property_name && p.property_value_definition_name)
-        .map((p) => ({ name: p.sku_property_name!, value: p.property_value_definition_name! })),
+        .filter((p) => p.sku_property_name && (p.property_value_definition_name ?? p.sku_property_value))
+        .map((p) => ({ name: p.sku_property_name!, value: (p.property_value_definition_name ?? p.sku_property_value)! })),
     }))
 
   return { name, images, costPriceEur, stock, description, skus }
