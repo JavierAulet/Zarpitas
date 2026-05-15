@@ -84,7 +84,8 @@ export async function POST(req: NextRequest) {
 
   // Place AliExpress orders
   for (const item of typedOrder.items) {
-    const aliexpressProductId = (item as { aliexpress_id?: string }).aliexpress_id
+    const typedItem = item as { aliexpress_id?: string; aliexpressId?: string; aliexpressSkuId?: string; sku_attr?: string }
+    const aliexpressProductId = typedItem.aliexpress_id ?? typedItem.aliexpressId
 
     if (!aliexpressProductId) {
       console.log(`[AliExpress] Skipping item "${item.name}" — no aliexpress_id, needs manual fulfillment`)
@@ -96,7 +97,6 @@ export async function POST(req: NextRequest) {
       const apiUrl = process.env.ALIEXPRESS_API_URL
       if (!apiUrl) throw new Error('ALIEXPRESS_API_URL not configured')
 
-      const typedItem = item as { aliexpressSkuId?: string; sku_attr?: string }
       const skuAttr = typedItem.sku_attr ?? typedItem.aliexpressSkuId
 
       const res = await fetch(`${apiUrl}/order`, {
