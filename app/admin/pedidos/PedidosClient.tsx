@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import {
   X, Search, Download, RefreshCw, AlertTriangle, Package,
-  MapPin, Phone, Mail, CreditCard, Truck, Check
+  MapPin, Phone, Mail, CreditCard, Truck, Check, ExternalLink, TrendingUp
 } from 'lucide-react'
 import { updateOrderStatus } from '@/lib/actions/orders'
 import type { OrderRow, OrderStatus } from '@/lib/supabase/types'
@@ -223,12 +223,22 @@ function OrderModal({ order, onClose }: { order: OrderRow; onClose: () => void }
           {/* AliExpress order refs */}
           {order.aliexpress_order_ids && order.aliexpress_order_ids.length > 0 && (
             <div className="bg-zinc-800 rounded-xl p-4">
-              <p className="text-zinc-400 text-xs font-bold uppercase tracking-wider mb-2">IDs de AliExpress</p>
-              <div className="space-y-1">
+              <p className="text-zinc-400 text-xs font-bold uppercase tracking-wider mb-2">Pedidos en AliExpress</p>
+              <div className="space-y-2">
                 {order.aliexpress_order_ids.map((ref, i) => (
-                  <div key={i} className="flex items-center gap-2 text-xs font-mono">
-                    <span className="text-zinc-500">Producto {ref.product_id}:</span>
-                    <span className="text-zinc-300">{ref.aliexpress_order_id}</span>
+                  <div key={i} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs font-mono">
+                      <span className="text-zinc-500">#{i + 1}:</span>
+                      <span className="text-zinc-300">{ref.aliexpress_order_id}</span>
+                    </div>
+                    <a
+                      href={`https://www.aliexpress.com/p/order/detail.html?orderId=${ref.aliexpress_order_id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-xs text-orange hover:text-orange/80 transition-colors"
+                    >
+                      Ver en AliExpress <ExternalLink size={11} />
+                    </a>
                   </div>
                 ))}
               </div>
@@ -281,8 +291,25 @@ function OrderModal({ order, onClose }: { order: OrderRow; onClose: () => void }
         {/* Footer — status actions */}
         <div className="px-6 py-4 border-t border-zinc-800">
 
+          {/* Profit margin */}
+          {(() => {
+            const items = order.items as { price: number; quantity: number; cost_price?: number }[]
+            const totalCost = items.reduce((sum, i) => sum + ((i.cost_price ?? 0) * i.quantity), 0)
+            const profit = order.total - order.shipping - totalCost
+            const margin = order.total > 0 ? (profit / order.total) * 100 : 0
+            if (totalCost === 0) return null
+            return (
+              <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-2.5 mb-4 text-xs">
+                <TrendingUp size={13} className="text-green-400 shrink-0" />
+                <span className="text-zinc-400">Coste: <span className="text-white font-mono">{totalCost.toFixed(2)}€</span></span>
+                <span className="text-zinc-400">Beneficio: <span className="text-green-400 font-bold font-mono">+{profit.toFixed(2)}€</span></span>
+                <span className="text-zinc-600 ml-auto">{margin.toFixed(0)}% margen</span>
+              </div>
+            )
+          })()}
+
           {/* Retry fulfillment */}
-          {order.needs_manual_review && (
+          {(order.needs_manual_review || order.status === 'confirmed') && (
             <div className="mb-4">
               <button
                 onClick={handleRetryFulfillment}
