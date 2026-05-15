@@ -18,6 +18,18 @@ const nextConfig = {
         protocol: 'https',
         hostname: '*.supabase.co',
       },
+      {
+        protocol: 'https',
+        hostname: '*.alicdn.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.aliexpress.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.aliexpress-media.com',
+      },
     ],
   },
 }
