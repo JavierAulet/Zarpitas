@@ -43,6 +43,75 @@ async function callAliExpress(method, extraParams) {
   return res.json()
 }
 
+// ─── Address normalization ────────────────────────────────────────────────────
+
+function removeAccents(str) {
+  return str.normalize('NFD').replace(/[̀-ͯ]/g, '')
+}
+
+// Maps Spanish provinces → autonomous community (what AliExpress accepts)
+const PROVINCE_MAP = {
+  // Andalucía
+  'almeria': 'Andalucia', 'cadiz': 'Andalucia', 'cordoba': 'Andalucia',
+  'granada': 'Andalucia', 'huelva': 'Andalucia', 'jaen': 'Andalucia',
+  'malaga': 'Andalucia', 'sevilla': 'Andalucia', 'seville': 'Andalucia',
+  // Aragón
+  'huesca': 'Aragon', 'teruel': 'Aragon', 'zaragoza': 'Aragon',
+  // Asturias
+  'asturias': 'Asturias',
+  // Baleares
+  'baleares': 'Balearic Islands', 'islas baleares': 'Balearic Islands', 'illes balears': 'Balearic Islands',
+  // País Vasco
+  'alava': 'Basque Country', 'guipuzcoa': 'Basque Country', 'vizcaya': 'Basque Country',
+  'araba': 'Basque Country', 'gipuzkoa': 'Basque Country', 'bizkaia': 'Basque Country',
+  // Canarias
+  'las palmas': 'Canary Islands', 'santa cruz de tenerife': 'Canary Islands', 'canarias': 'Canary Islands',
+  // Cantabria
+  'cantabria': 'Cantabria',
+  // Castilla-La Mancha
+  'albacete': 'Castilla La Mancha', 'ciudad real': 'Castilla La Mancha',
+  'cuenca': 'Castilla La Mancha', 'guadalajara': 'Castilla La Mancha', 'toledo': 'Castilla La Mancha',
+  // Castilla y León
+  'avila': 'Castilla y Leon', 'burgos': 'Castilla y Leon', 'leon': 'Castilla y Leon',
+  'palencia': 'Castilla y Leon', 'salamanca': 'Castilla y Leon', 'segovia': 'Castilla y Leon',
+  'soria': 'Castilla y Leon', 'valladolid': 'Castilla y Leon', 'zamora': 'Castilla y Leon',
+  // Cataluña
+  'barcelona': 'Catalonia', 'girona': 'Catalonia', 'gerona': 'Catalonia',
+  'lleida': 'Catalonia', 'lerida': 'Catalonia', 'tarragona': 'Catalonia', 'cataluna': 'Catalonia',
+  // Extremadura
+  'badajoz': 'Extremadura', 'caceres': 'Extremadura',
+  // Galicia
+  'a coruna': 'Galicia', 'lugo': 'Galicia', 'ourense': 'Galicia', 'pontevedra': 'Galicia',
+  // La Rioja
+  'la rioja': 'La Rioja', 'rioja': 'La Rioja',
+  // Madrid
+  'madrid': 'Madrid',
+  // Murcia
+  'murcia': 'Murcia',
+  // Navarra
+  'navarra': 'Navarra', 'navarre': 'Navarra',
+  // Comunitat Valenciana
+  'valencia': 'Valencia', 'alicante': 'Valencia', 'alacant': 'Valencia',
+  'castellon': 'Valencia', 'castello': 'Valencia',
+  // Ceuta / Melilla
+  'ceuta': 'Ceuta', 'melilla': 'Melilla',
+}
+
+function normalizeSpanishAddress(addr) {
+  const province = addr.province ?? ''
+  const provinceKey = removeAccents(province).toLowerCase().trim()
+  const mappedProvince = PROVINCE_MAP[provinceKey] ?? removeAccents(province)
+
+  return {
+    ...addr,
+    address: removeAccents(addr.address ?? ''),
+    city: removeAccents(addr.city ?? mappedProvince),
+    province: mappedProvince,
+    contact_person: removeAccents(addr.contact_person ?? addr.full_name ?? ''),
+    full_name: removeAccents(addr.full_name ?? addr.contact_person ?? ''),
+  }
+}
+
 // ─── Health ───────────────────────────────────────────────────────────────────
 
 app.get('/health', (req, res) => {
@@ -63,15 +132,13 @@ app.post('/order', async (req, res) => {
     return res.status(400).json({ success: false, error: 'Missing required fields' })
   }
 
-  // Normalize address — ensure both field name variants are present
   const normalizedAddress = {
-    ...logistics_address,
-    contact_person: logistics_address.contact_person ?? logistics_address.full_name ?? '',
-    full_name: logistics_address.full_name ?? logistics_address.contact_person ?? '',
+    ...normalizeSpanishAddress(logistics_address),
     phone_country_code: logistics_address.phone_country_code ?? logistics_address.phone_country ?? '34',
     phone_country: logistics_address.phone_country ?? logistics_address.phone_country_code ?? '34',
   }
 
+  console.log('[/order] Normalized address:', JSON.stringify(normalizedAddress))
   const orderPayload = { out_id, logistics_address: normalizedAddress, product_items }
 
   const attempts = [
