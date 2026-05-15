@@ -1,20 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createHash } from 'crypto'
+import { DropshipperClient } from 'ae_sdk'
 import { createServiceClient } from '@/lib/supabase/server'
-
-const TOKEN_URL = 'https://api-sg.aliexpress.com/rest/auth/token/create'
-const TOKEN_PATH = '/auth/token/create'
-
-function sign(params: Record<string, string>, secret: string): string {
-  const sortedStr = Object.keys(params)
-    .sort()
-    .map((k) => `${k}${params[k]}`)
-    .join('')
-  return createHash('sha256')
-    .update(secret + TOKEN_PATH + sortedStr + secret, 'utf8')
-    .digest('hex')
-    .toUpperCase()
-}
 
 function extractTokenFields(data: Record<string, unknown>): {
   access_token?: string
@@ -38,11 +24,9 @@ export async function GET(req: NextRequest) {
   console.log('[OAuth callback] URL:', req.nextUrl.toString())
 
   const code = req.nextUrl.searchParams.get('code')
-  const state = req.nextUrl.searchParams.get('state')
   const aeError = req.nextUrl.searchParams.get('error')
 
   console.log('[OAuth callback] code:', code ? `${code.slice(0, 10)}... (length: ${code.length})` : 'MISSING')
-  console.log('[OAuth callback] state:', state ?? 'none')
   console.log('[OAuth callback] error param:', aeError ?? 'none')
 
   if (aeError) {
@@ -55,82 +39,40 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL('/admin/configuracion?oauth=error&reason=no_code', req.url))
   }
 
-  const appKey = process.env.ALIEXPRESS_APP_KEY ?? '533884'
-  const appSecret = (process.env.ALIEXPRESS_APP_SECRET ?? '').trim()
+  const appKey = process.env.ALIEXPRESS_APP_KEY!
+  const appSecret = process.env.ALIEXPRESS_APP_SECRET!
 
   console.log('[OAuth callback] appKey:', appKey)
-  console.log('[OAuth callback] appSecret length:', appSecret.length)
+  console.log('[OAuth callback] appSecret length:', appSecret?.length ?? 0)
 
-  if (!appSecret) {
-    console.error('[OAuth callback] ALIEXPRESS_APP_SECRET is not set')
-    return NextResponse.redirect(new URL('/admin/configuracion?oauth=error&reason=no_secret', req.url))
+  if (!appKey || !appSecret) {
+    console.error('[OAuth callback] Missing ALIEXPRESS_APP_KEY or ALIEXPRESS_APP_SECRET')
+    return NextResponse.redirect(new URL('/admin/configuracion?oauth=error&reason=no_credentials', req.url))
   }
 
-  const timestamp = Date.now().toString()
-  // ae_sdk does not include grant_type for AliExpress token exchange
-  const params: Record<string, string> = {
-    app_key: appKey,
-    code,
-    sign_method: 'sha256',
-    timestamp,
-  }
+  const client = new DropshipperClient({ app_key: appKey, app_secret: appSecret })
 
-  const signature = sign(params, appSecret)
+  console.log('[OAuth callback] ── Calling ae_sdk generateToken ─────────────')
 
-  const sortedStr = Object.keys(params).sort().map((k) => `${k}${params[k]}`).join('')
-  console.log('[OAuth callback] strToSign: SECRET +', TOKEN_PATH, '+ sortedParams + SECRET')
-  console.log('[OAuth callback] sortedParams (code redacted):', sortedStr.replace(code, `${code.slice(0, 6)}...`))
-  console.log('[OAuth callback] signature:', signature)
-
-  const body = new URLSearchParams({ ...params, sign: signature })
-  console.log('[OAuth callback] POST', TOKEN_URL)
-
-  let rawText: string
-  let httpStatus: number
+  let tokenResponse: Record<string, unknown>
   try {
-    const res = await fetch(TOKEN_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8' },
-      body: body.toString(),
-    })
-    httpStatus = res.status
-    rawText = await res.text()
+    tokenResponse = (await client.generateToken({ code })) as Record<string, unknown>
   } catch (err) {
-    console.error('[OAuth callback] Fetch error:', err)
-    return NextResponse.redirect(new URL('/admin/configuracion?oauth=error&reason=fetch_failed', req.url))
+    console.error('[OAuth callback] ae_sdk generateToken threw:', err)
+    return NextResponse.redirect(new URL('/admin/configuracion?oauth=error&reason=sdk_error', req.url))
   }
 
-  console.log('[OAuth callback] HTTP status:', httpStatus)
-  console.log('[OAuth callback] Raw response:', rawText)
+  console.log('[OAuth callback] ae_sdk response:', JSON.stringify(tokenResponse))
 
-  let data: Record<string, unknown>
-  try {
-    data = JSON.parse(rawText)
-  } catch {
-    console.error('[OAuth callback] JSON parse failed')
-    return NextResponse.redirect(new URL('/admin/configuracion?oauth=error&reason=parse_error', req.url))
-  }
-
-  console.log('[OAuth callback] Response keys:', Object.keys(data).join(', '))
-
-  if (data.error_response) {
-    const errObj = data.error_response as Record<string, unknown>
-    const errMsg = String(errObj.msg ?? errObj.error_code ?? 'unknown')
-    console.error('[OAuth callback] error_response:', JSON.stringify(errObj))
-    return NextResponse.redirect(
-      new URL(`/admin/configuracion?oauth=error&reason=ae_error&msg=${encodeURIComponent(errMsg)}`, req.url)
-    )
-  }
-
-  const { access_token, refresh_token, expire_time } = extractTokenFields(data)
+  const { access_token, refresh_token, expire_time } = extractTokenFields(tokenResponse)
 
   console.log('[OAuth callback] access_token found:', !!access_token)
   console.log('[OAuth callback] refresh_token found:', !!refresh_token)
   console.log('[OAuth callback] expire_time:', expire_time)
 
   if (!access_token) {
-    const raw = JSON.stringify(data).slice(0, 300)
-    console.error('[OAuth callback] No access_token. Full response:', raw)
+    const raw = JSON.stringify(tokenResponse).slice(0, 300)
+    console.error('[OAuth callback] No access_token in response:', raw)
     return NextResponse.redirect(
       new URL(`/admin/configuracion?oauth=error&reason=no_token&raw=${encodeURIComponent(raw)}`, req.url)
     )
