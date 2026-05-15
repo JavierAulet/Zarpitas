@@ -1,6 +1,8 @@
 import { getOrders } from '@/lib/actions/orders'
 import AnalyticsClient from './AnalyticsClient'
 
+export const dynamic = 'force-dynamic'
+
 function getLast30DaysMap() {
   const map: Record<string, { revenue: number; orders: number }> = {}
   for (let i = 29; i >= 0; i--) {

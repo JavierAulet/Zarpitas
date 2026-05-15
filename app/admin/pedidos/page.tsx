@@ -3,6 +3,8 @@ import { getOrders } from '@/lib/actions/orders'
 import PedidosClient from './PedidosClient'
 import type { OrderRow } from '@/lib/supabase/types'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AdminPedidosPage() {
   let orders: OrderRow[] = []
   let dbConnected = true

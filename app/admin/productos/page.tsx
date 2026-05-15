@@ -2,6 +2,8 @@ import { AlertCircle } from 'lucide-react'
 import { getProducts } from '@/lib/actions/products'
 import ProductosClient from './ProductosClient'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AdminProductosPage() {
   let products: Awaited<ReturnType<typeof getProducts>> = []
   let dbConnected = true
