@@ -34,3 +34,9 @@ export async function deleteVariant(id: string, productId: string): Promise<void
   revalidatePath(`/admin/productos/${productId}`)
   revalidatePath(`/productos/${productId}`)
 }
+
+export async function deleteVariantsByProductId(productId: string): Promise<void> {
+  const db = createServiceClient()
+  const { error } = await db.from('product_variants').delete().eq('product_id', productId)
+  if (error) throw new Error(error.message)
+}

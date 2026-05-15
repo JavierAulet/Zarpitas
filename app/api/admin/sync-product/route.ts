@@ -2,45 +2,67 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createServiceClient } from '@/lib/supabase/server'
 
-async function fetchAEProductData(aliexpressId: string) {
-  const res = await fetch(`https://www.aliexpress.com/item/${aliexpressId}.html`, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept-Language': 'es-ES,es;q=0.9',
-    },
-  })
-  if (!res.ok) throw new Error(`AliExpress page returned ${res.status}`)
-  const html = await res.text()
+const USD_TO_EUR = 0.92
 
-  const match = html.match(/window\.runParams\s*=\s*(\{[\s\S]*?\});\s*(?:window|var|<\/script>)/)
-  if (!match) throw new Error('Could not parse AliExpress page')
+function stripHtml(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
 
-  const data = JSON.parse(match[1])
-  const d = data?.data ?? data
+interface SkuProperty {
+  sku_property_name?: string
+  property_value_definition_name?: string
+}
 
-  const priceComp = d?.priceComponent ?? d?.price ?? {}
-  const priceStr: string =
-    priceComp?.discountPrice?.minActivityAmount?.value ??
-    priceComp?.originalPrice?.minAmount?.value ??
-    priceComp?.salePriceString ??
-    '0'
+interface SkuDto {
+  sku_id?: string
+  offer_sale_price?: string
+  sku_available_stock?: number
+  ae_sku_property_dtos?: { ae_sku_property_d_t_o?: SkuProperty[] }
+}
 
-  const imageComp = d?.imageComponent ?? d?.image ?? {}
-  const images: string[] = (
-    imageComp?.imagePathList ??
-    imageComp?.images ??
-    d?.imagePathList ??
-    []
-  ).map((img: string) => (img.startsWith('//') ? `https:${img}` : img))
-
-  const name: string = d?.productInfoComponent?.subject ?? d?.subject ?? ''
-
-  return {
-    cost_price: parseFloat(priceStr) || null,
-    image: images[0] ?? null,
-    images,
-    name,
+function parseVpsResponse(raw: {
+  result?: {
+    ae_item_base_info_dto?: { subject?: string; detail?: string }
+    ae_multimedia_info_dto?: { image_urls?: string }
+    ae_item_sku_info_dtos?: { ae_item_sku_info_d_t_o?: SkuDto[] }
   }
+}) {
+  const result = raw.result ?? {}
+  const baseInfo = result.ae_item_base_info_dto ?? {}
+  const mediaInfo = result.ae_multimedia_info_dto ?? {}
+  const skuContainer = result.ae_item_sku_info_dtos?.ae_item_sku_info_d_t_o ?? []
+
+  const name = baseInfo.subject ?? ''
+  const images = (mediaInfo.image_urls ?? '').split(';').map((u) => u.trim()).filter(Boolean)
+
+  const skuPrices = skuContainer.map((s) => parseFloat(s.offer_sale_price ?? '0')).filter((p) => p > 0)
+  const minPriceUsd = skuPrices.length > 0 ? Math.min(...skuPrices) : 0
+  const costPriceEur = parseFloat((minPriceUsd * USD_TO_EUR).toFixed(2))
+  const stock = skuContainer.reduce((sum, s) => sum + (s.sku_available_stock ?? 0), 0)
+  const description = baseInfo.detail ? stripHtml(baseInfo.detail).slice(0, 1000) : ''
+
+  const skus = skuContainer
+    .filter((s) => s.sku_id)
+    .map((s) => ({
+      sku_id: s.sku_id!,
+      price: parseFloat((parseFloat(s.offer_sale_price ?? '0') * USD_TO_EUR).toFixed(2)),
+      stock: s.sku_available_stock ?? 0,
+      properties: (s.ae_sku_property_dtos?.ae_sku_property_d_t_o ?? [])
+        .filter((p) => p.sku_property_name && p.property_value_definition_name)
+        .map((p) => ({ name: p.sku_property_name!, value: p.property_value_definition_name! })),
+    }))
+
+  return { name, images, costPriceEur, stock, description, skus }
 }
 
 export async function POST(req: NextRequest) {
@@ -54,19 +76,88 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
   }
 
+  const apiUrl = process.env.ALIEXPRESS_API_URL
+  if (!apiUrl) {
+    return NextResponse.json({ error: 'ALIEXPRESS_API_URL not configured' }, { status: 500 })
+  }
+
   try {
-    const ae = await fetchAEProductData(aliexpress_id)
+    const res = await fetch(`${apiUrl}/product?id=${aliexpress_id}&country=ES&language=es`)
+    const raw = await res.json()
+    if (!res.ok) throw new Error(raw.error ?? 'VPS API error')
+
+    // Parse official AliExpress API format
+    if (!raw.result?.ae_item_base_info_dto) {
+      return NextResponse.json({ error: 'Unexpected API response format' }, { status: 502 })
+    }
+
+    const { name, images, costPriceEur, stock, description, skus } = parseVpsResponse(raw)
+
     const db = createServiceClient()
 
-    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
-    if (ae.cost_price) updates.cost_price = ae.cost_price
-    if (ae.image) updates.image = ae.image
-    if (ae.images?.length) updates.images = ae.images
+    // Get current product to calculate sale price ratio
+    const { data: currentProduct } = await db
+      .from('products')
+      .select('price, cost_price')
+      .eq('id', product_id)
+      .single()
 
-    const { error } = await db.from('products').update(updates).eq('id', product_id)
-    if (error) throw error
+    // Determine sale price: keep existing ratio or default to 2.5x
+    const ratio =
+      currentProduct?.cost_price && currentProduct?.price
+        ? currentProduct.price / currentProduct.cost_price
+        : 2.5
+    const newSalePrice = costPriceEur > 0
+      ? parseFloat((costPriceEur * ratio).toFixed(2))
+      : currentProduct?.price ?? 0
 
-    return NextResponse.json({ ok: true, cost_price: ae.cost_price, image: ae.image })
+    // Update product
+    const updates: Record<string, unknown> = {
+      stock,
+      updated_at: new Date().toISOString(),
+    }
+    if (images.length > 0) {
+      updates.image = images[0]
+      updates.images = images
+    }
+    if (costPriceEur > 0) {
+      updates.cost_price = costPriceEur
+      updates.price = newSalePrice
+    }
+    if (description) updates.description = description
+
+    const { error: updateError } = await db.from('products').update(updates).eq('id', product_id)
+    if (updateError) throw updateError
+
+    // Sync variants: delete AliExpress-sourced variants, then re-insert
+    const skusWithProps = skus.filter((s) => s.properties.length > 0)
+    if (skusWithProps.length > 0) {
+      // Delete existing AliExpress variants (those with sku field set)
+      await db.from('product_variants').delete().eq('product_id', product_id).not('sku', 'is', null)
+
+      // Insert new variants
+      const rows = skusWithProps.map((s, i) => ({
+        product_id,
+        name: s.properties.map((p) => p.value).join(' / '),
+        sku: s.sku_id,
+        price_modifier: parseFloat((s.price * ratio - newSalePrice).toFixed(2)),
+        stock: s.stock,
+        active: true,
+        sort_order: i,
+        properties: s.properties,
+      }))
+
+      const { error: variantError } = await db.from('product_variants').insert(rows)
+      if (variantError) throw variantError
+    }
+
+    return NextResponse.json({
+      ok: true,
+      cost_price: costPriceEur,
+      sale_price: newSalePrice,
+      stock,
+      variants_synced: skusWithProps.length,
+    })
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
