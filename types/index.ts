@@ -14,6 +14,7 @@ export interface Product {
   features?: string[]
   aliexpressId?: string
   stock?: number
+  showInBoth?: boolean
 }
 
 export interface VariantProperty {

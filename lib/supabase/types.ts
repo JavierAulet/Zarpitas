@@ -17,6 +17,7 @@ export interface ProductRow {
   aliexpress_id: string | null
   stock: number
   active: boolean
+  show_in_both: boolean
   created_at: string
   updated_at: string
 }
@@ -40,6 +41,7 @@ export interface ProductInsert {
   aliexpress_id?: string | null
   stock?: number
   active?: boolean
+  show_in_both?: boolean
 }
 
 export interface ProductUpdate extends Partial<ProductInsert> {}

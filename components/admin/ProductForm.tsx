@@ -187,6 +187,7 @@ export default function ProductForm({ mode, product, variants: initialVariants =
     product?.images?.length ? product.images : product?.image ? [product.image] : []
   )
   const [active, setActive] = useState(product?.active ?? true)
+  const [showInBoth, setShowInBoth] = useState(product?.show_in_both ?? false)
 
   // Variants state (edit mode only)
   const [variants, setVariants] = useState<ProductVariantRow[]>(initialVariants)
@@ -279,6 +280,7 @@ export default function ProductForm({ mode, product, variants: initialVariants =
       image: images[0] ?? null,
       images,
       active,
+      show_in_both: showInBoth,
     }
 
     try {
@@ -492,6 +494,22 @@ export default function ProductForm({ mode, product, variants: initialVariants =
             <label className={labelClass}>Subcategoría</label>
             <input className={inputClass} value={subcategory} onChange={(e) => setSubcategory(e.target.value)} placeholder="Collares y Arneses" />
           </div>
+          <label className="flex items-center gap-3 cursor-pointer group">
+            <div className="relative">
+              <input
+                type="checkbox"
+                checked={showInBoth}
+                onChange={(e) => setShowInBoth(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-10 h-6 bg-zinc-700 peer-checked:bg-orange rounded-full transition-colors" />
+              <div className="absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-4" />
+            </div>
+            <div>
+              <p className="text-white text-sm font-medium">Mostrar en ambas categorías</p>
+              <p className="text-zinc-500 text-xs">Aparece en Perros y Gatos al mismo tiempo</p>
+            </div>
+          </label>
           <div>
             <label className={labelClass}>Badge</label>
             <select className={inputClass} value={badge} onChange={(e) => setBadge(e.target.value)}>

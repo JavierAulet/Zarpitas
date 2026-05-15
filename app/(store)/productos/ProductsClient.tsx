@@ -23,7 +23,7 @@ export default function ProductsClient({ products }: { products: Product[] }) {
     let result = [...products]
 
     if (activeCategory !== 'todos') {
-      result = result.filter((p) => p.category === activeCategory)
+      result = result.filter((p) => p.category === activeCategory || p.showInBoth)
     }
 
     switch (activePriceRange) {

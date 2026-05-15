@@ -18,5 +18,6 @@ export function rowToProduct(row: ProductRow): Product {
     features: row.features ?? [],
     aliexpressId: row.aliexpress_id ?? undefined,
     stock: row.stock,
+    showInBoth: row.show_in_both,
   }
 }
