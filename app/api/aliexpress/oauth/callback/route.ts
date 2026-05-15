@@ -11,7 +11,7 @@ function sign(params: Record<string, string>, secret: string): string {
     .map((k) => `${k}${params[k]}`)
     .join('')
   return createHash('sha256')
-    .update(secret + TOKEN_PATH + sortedStr + secret)
+    .update(secret + TOKEN_PATH + sortedStr + secret, 'utf8')
     .digest('hex')
     .toUpperCase()
 }
@@ -67,10 +67,10 @@ export async function GET(req: NextRequest) {
   }
 
   const timestamp = Date.now().toString()
+  // ae_sdk does not include grant_type for AliExpress token exchange
   const params: Record<string, string> = {
     app_key: appKey,
     code,
-    grant_type: 'authorization_code',
     sign_method: 'sha256',
     timestamp,
   }
