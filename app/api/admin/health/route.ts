@@ -39,5 +39,20 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  if (service === 'orders') {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!url || !key) return NextResponse.json({ error: 'Supabase env vars not set' }, { status: 500 })
+    try {
+      const res = await fetch(`${url}/rest/v1/orders?select=id,status,customer_email,created_at,needs_manual_review&order=created_at.desc`, {
+        headers: { apikey: key, Authorization: `Bearer ${key}`, 'Range-Unit': 'items', Prefer: 'count=exact' },
+      })
+      const data = await res.json()
+      return NextResponse.json({ count: Array.isArray(data) ? data.length : 0, orders: data })
+    } catch (e) {
+      return NextResponse.json({ error: String(e) }, { status: 500 })
+    }
+  }
+
   return NextResponse.json({ error: 'Unknown service' }, { status: 400 })
 }
