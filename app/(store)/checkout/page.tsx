@@ -360,7 +360,7 @@ function SuccessScreen({ isLoggedIn, orderId }: { isLoggedIn: boolean; orderId: 
               Crea tu cuenta gratis y verás el estado de envío en tiempo real.
             </p>
             <Link
-              href="/mi-cuenta/login"
+              href="/mi-cuenta/login?mode=register"
               className="inline-flex items-center gap-1.5 bg-orange text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors hover:bg-orange-dark"
             >
               Crear cuenta gratis →
