@@ -352,7 +352,7 @@ export default function ProductDetail({ product, variants = [] }: ProductDetailP
         {/* Trust */}
         <div className="grid grid-cols-3 gap-3">
           {[
-            { icon: Truck, text: 'Envío 24h\ngratis +40€' },
+            { icon: Truck, text: 'Envío gratis\n+40€' },
             { icon: RotateCcw, text: 'Devolución\n30 días' },
             { icon: Shield, text: 'Pago\nseguro' },
           ].map(({ icon: Icon, text }) => (

@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     template: '%s | Zarpitas',
   },
   description:
-    'La tienda para mascotas hecha por personas que aman a los animales. Productos premium para perros y gatos con envío rápido en España. Devolución 30 días gratis.',
+    'La tienda para mascotas hecha por personas que aman a los animales. Productos premium para perros y gatos con envío gratuito a España. Devolución 30 días gratis.',
   keywords: [
     'tienda mascotas España',
     'productos perros España',
@@ -53,7 +53,7 @@ export const metadata: Metadata = {
     siteName: 'Zarpitas.es',
     title: 'Zarpitas.es — Todo el amor que merece tu mejor amigo',
     description:
-      'Productos premium para mascotas en España. Collar GPS, camas ortopédicas, comederos inteligentes y más. Envío 24h, devolución gratis 30 días.',
+      'Productos premium para mascotas en España. Collar GPS, camas ortopédicas, comederos inteligentes y más. Envío gratuito, devolución gratis 30 días.',
     images: [
       {
         url: '/images/hero.jpg',
@@ -68,7 +68,7 @@ export const metadata: Metadata = {
     site: '@zarpitas_es',
     creator: '@zarpitas_es',
     title: 'Zarpitas.es — Todo el amor que merece tu mejor amigo',
-    description: 'Productos premium para mascotas en España. Envío 24h, devolución gratis.',
+    description: 'Productos premium para mascotas en España. Envío gratuito, devolución gratis.',
     images: ['/images/hero.jpg'],
   },
   alternates: {

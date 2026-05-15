@@ -531,7 +531,7 @@ function OrderSummary({ total, shipping, grandTotal, freeShipping, discount, cou
           <div className="mt-5 pt-4 border-t border-cream-deep space-y-2">
             {[
               { icon: '🔒', text: 'Pago 100% seguro con Stripe' },
-              { icon: '🚀', text: 'Envío express 24h' },
+              { icon: '🚀', text: 'Envío gratuito con seguimiento' },
               { icon: '↩️', text: 'Devolución 30 días gratis' },
             ].map(({ icon, text }) => (
               <div key={text} className="flex items-center gap-2 text-xs text-text-muted">

@@ -9,11 +9,11 @@ export const revalidate = 60
 const categoryMeta: Record<string, { title: string; description: string }> = {
   perros: {
     title: 'Productos para perros en España — Collares, camas y más',
-    description: 'La mejor selección de productos para perros en España: collar GPS, camas ortopédicas, arneses antipull y más. Envío 24h, devolución 30 días gratis.',
+    description: 'La mejor selección de productos para perros en España: collar GPS, camas ortopédicas, arneses antipull y más. Envío gratuito, devolución 30 días gratis.',
   },
   gatos: {
     title: 'Productos para gatos en España — Rascadores, comederos y más',
-    description: 'Productos premium para gatos en España: árboles rascadores, comederos automáticos, bebederos fuente y más. Envío rápido, devolución gratis.',
+    description: 'Productos premium para gatos en España: árboles rascadores, comederos automáticos, bebederos fuente y más. Envío gratuito, devolución gratis.',
   },
 }
 
@@ -27,7 +27,7 @@ export function generateMetadata({ searchParams }: Props): Metadata {
 
   const title = meta?.title ?? 'Todos los productos para mascotas en España'
   const description = meta?.description ??
-    'Catálogo completo de productos premium para perros y gatos en España. Collar GPS, camas ortopédicas, rascadores, comederos y más. Envío 24h, devolución gratis.'
+    'Catálogo completo de productos premium para perros y gatos en España. Collar GPS, camas ortopédicas, rascadores, comederos y más. Envío gratuito, devolución gratis.'
 
   const canonical = cat
     ? `https://zarpitas.es/productos?categoria=${cat}`

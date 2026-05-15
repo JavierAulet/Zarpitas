@@ -68,7 +68,7 @@ export default function ProductsClient({ products }: { products: Product[] }) {
             </h1>
             <p className="text-text-secondary max-w-md">
               Seleccionados con amor por nuestro equipo de apasionados de las mascotas.
-              Calidad garantizada, envío en 24h a toda España.
+              Calidad garantizada, envío gratuito con seguimiento a España.
             </p>
           </motion.div>
         </div>

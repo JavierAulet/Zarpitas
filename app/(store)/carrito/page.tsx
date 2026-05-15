@@ -102,7 +102,7 @@ export default function CarritoPage() {
                 </Link>
 
                 <div className="mt-5 pt-5 border-t border-cream-deep space-y-1.5">
-                  {['🔒 Pago 100% seguro', '🚀 Envío express 24h', '↩️ Devolución 30 días'].map((t) => (
+                  {['🔒 Pago 100% seguro', '🚀 Envío gratuito con seguimiento', '↩️ Devolución 30 días'].map((t) => (
                     <p key={t} className="text-xs text-text-muted text-center">{t}</p>
                   ))}
                 </div>

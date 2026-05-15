@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { Truck, RotateCcw, ShieldCheck, HeartHandshake } from 'lucide-react'
 
 const items = [
-  { icon: Truck, emoji: '🚀', title: 'Envío en 24h', desc: 'Gratis desde 40€ en España', color: 'bg-green-50 border-green/10', iconColor: 'text-green' },
+  { icon: Truck, emoji: '🚀', title: 'Envío Gratuito', desc: 'Con seguimiento a toda España · desde 40€', color: 'bg-green-50 border-green/10', iconColor: 'text-green' },
   { icon: RotateCcw, emoji: '↩️', title: 'Devolución 30 días', desc: 'Sin preguntas, sin complicaciones', color: 'bg-orange-50 border-orange/10', iconColor: 'text-orange' },
   { icon: ShieldCheck, emoji: '🔒', title: 'Pago 100% seguro', desc: 'Visa, Mastercard, PayPal, Bizum', color: 'bg-green-50 border-green/10', iconColor: 'text-green' },
   { icon: HeartHandshake, emoji: '❤️', title: '+5.000 mascotas felices', desc: 'Valoración media de 4.9 estrellas', color: 'bg-orange-50 border-orange/10', iconColor: 'text-orange' },

@@ -68,7 +68,7 @@ export default function Hero() {
               className="text-text-secondary text-lg leading-relaxed max-w-md"
             >
               Productos premium para perros y gatos, escogidos con el mismo amor con el
-              que cuidas a tu mascota. Enviamos a toda España en 24h.
+              que cuidas a tu mascota. Envío gratuito con seguimiento a toda España.
             </motion.p>
 
             {/* CTAs */}
@@ -92,7 +92,7 @@ export default function Hero() {
               className="flex flex-wrap gap-5 pt-4 border-t border-cream-deep"
             >
               {[
-                { icon: Truck, text: 'Envío en 24h', sub: 'Gratis desde 40€' },
+                { icon: Truck, text: 'Envío Gratuito', sub: 'Seguimiento incluido' },
                 { icon: RotateCcw, text: 'Devolución 30 días', sub: 'Sin preguntas' },
                 { icon: ShieldCheck, text: 'Pago seguro', sub: '100% protegido' },
               ].map(({ icon: Icon, text, sub }) => (

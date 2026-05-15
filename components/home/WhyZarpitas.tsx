@@ -19,9 +19,9 @@ const reasons = [
     emoji: '⚡',
     title: 'Rapidísimo',
     description:
-      'Sabemos que cuando tu mascota necesita algo, lo necesita ya. Por eso enviamos en 24h y con seguimiento en tiempo real.',
-    stat: '24h',
-    statLabel: 'Tiempo de entrega',
+      'Enviamos a toda España con seguimiento en tiempo real para que sepas dónde está tu pedido en todo momento. Envío gratuito desde 40€.',
+    stat: 'FREE',
+    statLabel: 'Envío desde 40€',
     color: 'bg-green-50 border-green/10',
     iconColor: 'text-green',
   },

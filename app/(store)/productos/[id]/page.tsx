@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const imageUrl = product.image ?? undefined
   const description =
     product.description?.slice(0, 155) ??
-    `Compra ${product.name} con envío rápido a España. Devolución 30 días gratis.`
+    `Compra ${product.name} con envío gratuito a España. Devolución 30 días gratis.`
 
   return {
     title: `${product.name} — Comprar en España`,
