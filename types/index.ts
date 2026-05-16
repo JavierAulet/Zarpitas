@@ -15,6 +15,7 @@ export interface Product {
   aliexpressId?: string
   stock?: number
   showInBoth?: boolean
+  hasVariants?: boolean
 }
 
 export interface VariantProperty {

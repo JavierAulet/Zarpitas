@@ -17,13 +17,13 @@ export async function getProducts() {
 
 export async function getActiveProducts(): Promise<Product[]> {
   const db = createServerClient()
-  const { data, error } = await db
-    .from('products')
-    .select('*')
-    .eq('active', true)
-    .order('created_at', { ascending: false })
+  const [{ data, error }, { data: variantRows }] = await Promise.all([
+    db.from('products').select('*').eq('active', true).order('created_at', { ascending: false }),
+    db.from('product_variants').select('product_id').eq('active', true),
+  ])
   if (error) throw new Error(error.message)
-  return (data ?? []).map(rowToProduct)
+  const withVariants = new Set((variantRows ?? []).map((r) => r.product_id))
+  return (data ?? []).map((row) => ({ ...rowToProduct(row), hasVariants: withVariants.has(row.id) }))
 }
 
 export async function getProduct(id: string) {

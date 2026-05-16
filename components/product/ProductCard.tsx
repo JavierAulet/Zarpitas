@@ -1,8 +1,9 @@
 'use client'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { ShoppingCart, Eye } from 'lucide-react'
+import { ShoppingCart, Eye, ChevronRight } from 'lucide-react'
 import type { Product } from '@/types'
 import Badge from '@/components/ui/Badge'
 import StarRating from '@/components/ui/StarRating'
@@ -26,10 +27,15 @@ interface ProductCardProps {
 export default function ProductCard({ product, priority = false }: ProductCardProps) {
   const addItem = useCartStore((state) => state.addItem)
   const openCart = useUIStore((state) => state.openCart)
+  const router = useRouter()
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    if (product.hasVariants) {
+      router.push(`/productos/${product.id}`)
+      return
+    }
     addItem(product)
     openCart()
   }
@@ -97,8 +103,11 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
               onClick={handleAddToCart}
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-orange text-white font-bold text-sm hover:bg-orange-dark transition-colors shadow-orange"
             >
-              <ShoppingCart size={14} />
-              Añadir al carrito
+              {product.hasVariants ? (
+                <><ChevronRight size={14} /> Ver opciones</>
+              ) : (
+                <><ShoppingCart size={14} /> Añadir al carrito</>
+              )}
             </button>
           </motion.div>
 
