@@ -26,7 +26,7 @@ const sections: FAQSection[] = [
     items: [
       {
         q: '¿Cuánto tarda en llegar mi pedido?',
-        a: 'El plazo estimado de entrega es de 7 a 20 días hábiles. Una vez que tu pedido sale de nuestro almacén recibirás un correo con el número de seguimiento para que puedas rastrearlo en todo momento.',
+        a: 'Los pedidos se preparan en 24-48 horas y la entrega suele realizarse en 5-12 días hábiles. En cuanto tu pedido salga recibirás un email con el número de seguimiento para que puedas ver dónde está en cada momento.',
       },
       {
         q: '¿El envío es gratuito?',
@@ -34,11 +34,11 @@ const sections: FAQSection[] = [
       },
       {
         q: '¿Enviáis a Baleares, Canarias y Ceuta/Melilla?',
-        a: 'Actualmente enviamos a España peninsular e Islas Baleares. Para Canarias, Ceuta y Melilla contacta con nosotros antes de hacer el pedido para confirmar disponibilidad y costes.',
+        a: 'Enviamos a toda España peninsular e Islas Baleares sin coste adicional. Para Canarias, Ceuta y Melilla escríbenos a hola@zarpitas.es para confirmar disponibilidad.',
       },
       {
         q: '¿Puedo cambiar la dirección de entrega después de hacer el pedido?',
-        a: 'Si tu pedido aún no ha salido, escríbenos cuanto antes a hola@zarpitas.es con tu número de pedido y la nueva dirección. Una vez enviado, no es posible modificar el destino.',
+        a: 'Si tu pedido aún está en preparación, escríbenos cuanto antes a hola@zarpitas.es con tu número de pedido y la nueva dirección e intentaremos cambiarlo. Una vez enviado, no es posible modificar el destino.',
       },
     ],
   },
@@ -50,19 +50,19 @@ const sections: FAQSection[] = [
     items: [
       {
         q: '¿Cómo puedo rastrear mi pedido?',
-        a: 'Cuando tu pedido sea enviado recibirás un email con el número de tracking. Puedes usarlo en la web del transportista o en páginas como 17track.net para ver la ubicación en tiempo real.',
+        a: 'En cuanto tu pedido salga te enviamos un email con el número de seguimiento. Con él puedes ver en tiempo real dónde está tu paquete y la fecha estimada de entrega.',
       },
       {
         q: '¿Cuándo recibo el número de seguimiento?',
-        a: 'El número de seguimiento se genera en las primeras 24-48 horas tras la confirmación del pago. Te llegará automáticamente por correo electrónico.',
+        a: 'Lo recibirás por email en las 24-48 horas siguientes a la confirmación del pago, una vez que tu pedido esté preparado y listo para salir.',
       },
       {
-        q: 'Mi número de tracking no funciona todavía, ¿es normal?',
-        a: 'Sí, es completamente normal. A veces los sistemas de los transportistas tardan 24-72 horas en activar el seguimiento aunque el paquete ya esté en camino. Si después de 5 días sigue sin funcionar, contáctanos.',
+        q: 'El seguimiento no muestra actualizaciones, ¿qué hago?',
+        a: 'El seguimiento se actualiza cada vez que el paquete pasa por un punto de control. Si llevas más de 3 días sin nuevas actualizaciones, escríbenos a hola@zarpitas.es y lo comprobamos para ti.',
       },
       {
         q: '¿Qué pasa si mi pedido aparece como entregado pero no lo he recibido?',
-        a: 'Comprueba primero si algún vecino o conserjería lo ha recogido. Si no lo encuentras, escríbenos a hola@zarpitas.es con tu número de pedido y lo gestionamos de inmediato.',
+        a: 'Comprueba primero si algún vecino o conserjería lo ha recogido. Si no lo encuentras, escríbenos a hola@zarpitas.es con tu número de pedido y lo solucionamos en menos de 24 horas.',
       },
     ],
   },
