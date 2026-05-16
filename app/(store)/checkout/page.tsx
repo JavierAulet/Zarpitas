@@ -311,7 +311,17 @@ function CheckoutInner({ paymentIntentId, grandTotal, shipping, subtotal, discou
 
 // ─── Success screen ───────────────────────────────────────────────────────────
 
-function SuccessScreen({ isLoggedIn, orderId }: { isLoggedIn: boolean; orderId: string }) {
+function SuccessScreen({ isLoggedIn, orderId, orderTotal }: { isLoggedIn: boolean; orderId: string; orderTotal: number }) {
+  useEffect(() => {
+    if (typeof window !== 'undefined' && typeof (window as Window & { gtag?: (...args: unknown[]) => void }).gtag === 'function') {
+      ;(window as Window & { gtag: (...args: unknown[]) => void }).gtag('event', 'conversion', {
+        send_to: process.env.NEXT_PUBLIC_GOOGLE_ADS_ID,
+        value: orderTotal,
+        currency: 'EUR',
+        transaction_id: orderId,
+      })
+    }
+  }, [orderId, orderTotal])
   const deliveryFrom = new Date()
   deliveryFrom.setDate(deliveryFrom.getDate() + 5)
   const deliveryTo = new Date()
@@ -623,7 +633,7 @@ export default function CheckoutPage() {
     createPaymentIntent()
   }, [createPaymentIntent])
 
-  if (success) return <SuccessScreen isLoggedIn={isLoggedIn} orderId={orderId} />
+  if (success) return <SuccessScreen isLoggedIn={isLoggedIn} orderId={orderId} orderTotal={grandTotal} />
 
   if (items.length === 0) {
     return (

@@ -2,7 +2,10 @@ import type { Metadata } from 'next'
 import { Nunito, Plus_Jakarta_Sans } from 'next/font/google'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { Analytics } from '@vercel/analytics/react'
+import Script from 'next/script'
 import './globals.css'
+
+const GADS_ID = process.env.NEXT_PUBLIC_GOOGLE_ADS_ID
 
 const nunito = Nunito({
   subsets: ['latin'],
@@ -93,6 +96,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://js.stripe.com" />
         <link rel="preload" as="image" href="/images/hero.jpg" />
+        {GADS_ID && (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${GADS_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script id="gtag-init" strategy="afterInteractive">
+              {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','${GADS_ID}');`}
+            </Script>
+          </>
+        )}
       </head>
       <body className="bg-cream text-text-primary font-sans antialiased">
         {children}
