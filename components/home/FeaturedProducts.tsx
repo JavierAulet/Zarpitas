@@ -54,7 +54,7 @@ export default function FeaturedProducts({ products }: { products: Product[] }) 
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: '-80px' }}
-          className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6"
+          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6"
         >
           {products.map((product) => (
             <motion.div key={product.id} variants={itemVariants}>

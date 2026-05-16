@@ -28,8 +28,8 @@ export default function Hero() {
   return (
     <section className="relative min-h-screen bg-cream overflow-hidden flex items-center pt-20">
       {/* Decorative blobs */}
-      <div className="absolute top-16 right-0 w-[600px] h-[600px] bg-orange-50 rounded-full -translate-y-1/4 translate-x-1/4 pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-96 h-96 bg-green-50 rounded-full translate-y-1/3 -translate-x-1/3 pointer-events-none" />
+      <div className="absolute top-16 right-0 w-[280px] h-[280px] sm:w-[600px] sm:h-[600px] bg-orange-50 rounded-full -translate-y-1/4 translate-x-1/4 pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-48 h-48 sm:w-96 sm:h-96 bg-green-50 rounded-full translate-y-1/3 -translate-x-1/3 pointer-events-none" />
 
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full py-12 md:py-0">
@@ -138,7 +138,7 @@ export default function Hero() {
             <motion.div
               variants={floatVariants}
               animate="animate"
-              className="absolute -left-6 top-12 bg-white rounded-2xl shadow-float px-4 py-3 z-20 border border-cream-deep"
+              className="hidden sm:block absolute -left-6 top-12 bg-white rounded-2xl shadow-float px-4 py-3 z-20 border border-cream-deep"
             >
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 bg-green-50 rounded-xl flex items-center justify-center">
@@ -155,7 +155,7 @@ export default function Hero() {
             <motion.div
               animate={{ y: [0, 8, 0] }}
               transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-              className="absolute -right-4 bottom-16 bg-white rounded-2xl shadow-float px-4 py-3 z-20 border border-cream-deep"
+              className="hidden sm:block absolute -right-4 bottom-16 bg-white rounded-2xl shadow-float px-4 py-3 z-20 border border-cream-deep"
             >
               <div className="flex items-center gap-1.5 mb-1">
                 {Array.from({ length: 5 }).map((_, i) => (
@@ -170,7 +170,7 @@ export default function Hero() {
             <motion.div
               animate={{ rotate: [-4, 4, -4] }}
               transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-              className="absolute top-6 right-6 bg-orange text-white rounded-xl px-3 py-1.5 z-20 shadow-orange"
+              className="hidden sm:block absolute top-6 right-6 bg-orange text-white rounded-xl px-3 py-1.5 z-20 shadow-orange"
             >
               <p className="text-xs font-black">✨ Nuevos collares GPS</p>
             </motion.div>

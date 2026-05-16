@@ -682,7 +682,21 @@ export default function CheckoutPage() {
           </div>
         )}
 
-        <div className="grid lg:grid-cols-5 gap-8">
+        {/* Mobile order summary — shown above form on small screens */}
+        <div className="lg:hidden mb-6">
+          <OrderSummary
+            total={total}
+            shipping={shipping}
+            grandTotal={grandTotal}
+            freeShipping={freeShipping}
+            discount={discount}
+            coupon={appliedCoupon}
+            subtotal={total}
+            onCouponApplied={setAppliedCoupon}
+          />
+        </div>
+
+        <div className="grid lg:grid-cols-5 gap-8 lg:items-start">
           {clientSecret ? (
             <Elements
               stripe={stripePromise}
@@ -727,16 +741,18 @@ export default function CheckoutPage() {
             </div>
           )}
 
-          <OrderSummary
-            total={total}
-            shipping={shipping}
-            grandTotal={grandTotal}
-            freeShipping={freeShipping}
-            discount={discount}
-            coupon={appliedCoupon}
-            subtotal={total}
-            onCouponApplied={setAppliedCoupon}
-          />
+          <div className="hidden lg:block">
+            <OrderSummary
+              total={total}
+              shipping={shipping}
+              grandTotal={grandTotal}
+              freeShipping={freeShipping}
+              discount={discount}
+              coupon={appliedCoupon}
+              subtotal={total}
+              onCouponApplied={setAppliedCoupon}
+            />
+          </div>
         </div>
       </div>
     </div>

@@ -177,7 +177,7 @@ export default function ProductDetail({ product, variants = [] }: ProductDetailP
               <button
                 key={i}
                 onClick={() => setSelectedImage(i)}
-                className={`relative w-20 h-20 rounded-2xl overflow-hidden border-2 transition-all ${
+                className={`relative w-14 h-14 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border-2 transition-all ${
                   selectedImage === i ? 'border-orange shadow-orange/30 shadow-md' : 'border-cream-deep hover:border-sand'
                 }`}
               >
@@ -214,7 +214,7 @@ export default function ProductDetail({ product, variants = [] }: ProductDetailP
 
         {/* Price */}
         <div className="flex items-baseline gap-3 mb-5 pb-5 border-b-2 border-cream-deep">
-          <span className="font-display font-black text-5xl text-orange">
+          <span className="font-display font-black text-3xl sm:text-5xl text-orange">
             {effectivePrice.toFixed(2).replace('.', ',')}€
           </span>
           {product.originalPrice && (

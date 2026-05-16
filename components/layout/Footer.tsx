@@ -127,14 +127,14 @@ export default function Footer() {
             Hecho con <Heart size={11} fill="#FF6B35" className="text-orange" /> por amantes de las mascotas ·{' '}
             © {new Date().getFullYear()} Zarpitas.es
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 justify-center">
             {['Visa', 'Mastercard', 'PayPal', 'Bizum'].map((m) => (
               <span key={m} className="px-2.5 py-1 bg-white rounded-lg border border-cream-deep text-xs text-text-muted font-medium">
                 {m}
               </span>
             ))}
           </div>
-          <div className="flex gap-4">
+          <div className="flex flex-wrap justify-center gap-3 md:gap-4">
             <Link href="/politica-de-privacidad" className="text-xs text-text-muted hover:text-orange transition-colors">Privacidad</Link>
             <Link href="/politica-de-cookies" className="text-xs text-text-muted hover:text-orange transition-colors">Cookies</Link>
             <Link href="/terminos-y-condiciones" className="text-xs text-text-muted hover:text-orange transition-colors">Términos</Link>
