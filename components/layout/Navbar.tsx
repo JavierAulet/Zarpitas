@@ -12,6 +12,7 @@ const navLinks = [
   { href: '/productos?categoria=perros', label: '🐶 Perros' },
   { href: '/productos?categoria=gatos', label: '🐱 Gatos' },
   { href: '/blog', label: '📖 Blog' },
+  { href: '/faq', label: 'Ayuda' },
 ]
 
 export default function Navbar() {
