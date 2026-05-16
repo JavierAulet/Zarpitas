@@ -160,7 +160,10 @@ export default async function HomePage() {
       <Hero />
       <TrustBar />
       <FeaturedProducts products={featured} />
-      <Categories />
+      <Categories counts={{
+        perros: allProducts.filter((p) => p.category === 'perros' || p.showInBoth).length,
+        gatos: allProducts.filter((p) => p.category === 'gatos' || p.showInBoth).length,
+      }} />
       <WhyZarpitas />
       <BestSellers products={bestSellers} />
       <Testimonials />

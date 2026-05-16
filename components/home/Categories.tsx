@@ -35,7 +35,9 @@ const categories = [
   },
 ]
 
-export default function Categories() {
+export default function Categories({ counts }: { counts?: { perros: number; gatos: number } }) {
+  const perrosCount = counts?.perros ?? 5
+  const gatosCount = counts?.gatos ?? 3
   return (
     <section className="py-20 md:py-28 bg-cream-warm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -93,7 +95,7 @@ export default function Categories() {
 
                     {/* Count pill */}
                     <div className="absolute top-4 right-4 px-3 py-1.5 bg-white/90 backdrop-blur-sm rounded-full text-xs font-bold text-text-secondary">
-                      {cat.count} productos
+                      {cat.id === 'perros' ? perrosCount : gatosCount} productos
                     </div>
                   </div>
 
