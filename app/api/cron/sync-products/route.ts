@@ -95,8 +95,15 @@ async function syncProduct(
     .single()
 
   const ratio = current?.cost_price && current?.price ? current.price / current.cost_price : 2.5
-  const newSalePrice = costPriceEur > 0
-    ? parseFloat((costPriceEur * ratio).toFixed(2))
+
+  const skusWithPropsForPrice = skus.filter((s) => s.properties.length > 0)
+  const baseCost = skusWithPropsForPrice.length > 0
+    ? Math.min(...skusWithPropsForPrice.map((s) => s.price))
+    : costPriceEur
+  const effectiveCost = baseCost > 0 ? baseCost : costPriceEur
+
+  const newSalePrice = effectiveCost > 0
+    ? parseFloat((effectiveCost * ratio).toFixed(2))
     : current?.price ?? 0
 
   const updates: Record<string, unknown> = { stock, updated_at: new Date().toISOString() }
@@ -115,7 +122,7 @@ async function syncProduct(
       name: s.properties.map((p) => p.value).join(' / '),
       sku: s.sku_id,
       sku_attr: s.sku_attr || null,
-      price_modifier: parseFloat((s.price * ratio - newSalePrice).toFixed(2)),
+      price_modifier: Math.max(0, parseFloat((s.price * ratio - newSalePrice).toFixed(2))),
       stock: s.stock,
       active: true,
       sort_order: i,
