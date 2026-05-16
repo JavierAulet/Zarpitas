@@ -536,6 +536,7 @@ export default function ProductosClient({ initialProducts }: Props) {
   const [syncing, setSyncing] = useState<Set<string>>(new Set())
   const [syncResult, setSyncResult] = useState<Record<string, 'ok' | 'error'>>({})
   const [bulkSyncing, setBulkSyncing] = useState(false)
+  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null)
 
   function handleImportSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -552,27 +553,36 @@ export default function ProductosClient({ initialProducts }: Props) {
 
   async function syncProduct(productId: string, aliexpressId: string) {
     setSyncing((prev) => new Set(prev).add(productId))
-    try {
-      const res = await fetch('/api/admin/sync-product', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ product_id: productId, aliexpress_id: aliexpressId }),
-      })
-      setSyncResult((prev) => ({ ...prev, [productId]: res.ok ? 'ok' : 'error' }))
-      if (res.ok) refresh()
-    } catch {
-      setSyncResult((prev) => ({ ...prev, [productId]: 'error' }))
-    } finally {
-      setSyncing((prev) => { const s = new Set(prev); s.delete(productId); return s })
+    let ok = false
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        if (attempt > 0) await new Promise((r) => setTimeout(r, 2500))
+        const res = await fetch('/api/admin/sync-product', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ product_id: productId, aliexpress_id: aliexpressId }),
+        })
+        if (res.ok) { ok = true; refresh(); break }
+      } catch { /* retry */ }
     }
+    setSyncResult((prev) => ({ ...prev, [productId]: ok ? 'ok' : 'error' }))
+    setSyncing((prev) => { const s = new Set(prev); s.delete(productId); return s })
   }
 
   async function handleBulkSync() {
     const withAE = initialProducts.filter((p) => p.aliexpress_id)
     if (!withAE.length) return
     setBulkSyncing(true)
-    await Promise.all(withAE.map((p) => syncProduct(p.id, p.aliexpress_id!)))
+    setBulkProgress({ done: 0, total: withAE.length })
+    const BATCH = 4
+    for (let i = 0; i < withAE.length; i += BATCH) {
+      const batch = withAE.slice(i, i + BATCH)
+      await Promise.all(batch.map((p) => syncProduct(p.id, p.aliexpress_id!)))
+      setBulkProgress({ done: Math.min(i + BATCH, withAE.length), total: withAE.length })
+      if (i + BATCH < withAE.length) await new Promise((r) => setTimeout(r, 1200))
+    }
     setBulkSyncing(false)
+    setBulkProgress(null)
   }
 
   const filtered = initialProducts.filter((p) => {
@@ -598,7 +608,7 @@ export default function ProductosClient({ initialProducts }: Props) {
           <button onClick={handleBulkSync} disabled={bulkSyncing || withAECount === 0}
             className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium px-4 py-2.5 rounded-xl text-sm transition-colors disabled:opacity-50">
             <RefreshCw size={14} className={bulkSyncing ? 'animate-spin' : ''} />
-            Sincronizar todo
+            {bulkProgress ? `Sincronizando ${bulkProgress.done}/${bulkProgress.total}…` : 'Sincronizar todo'}
           </button>
           <Link href="/admin/productos/nuevo"
             className="flex items-center gap-2 bg-orange hover:bg-orange-dark text-white font-bold px-4 py-2.5 rounded-xl text-sm transition-colors">
