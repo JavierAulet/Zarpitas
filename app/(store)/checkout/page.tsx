@@ -1,4 +1,5 @@
 'use client'
+declare global { interface Window { gtag?: (...args: unknown[]) => void } }
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -313,10 +314,8 @@ function CheckoutInner({ paymentIntentId, grandTotal, shipping, subtotal, discou
 
 function SuccessScreen({ isLoggedIn, orderId, orderTotal }: { isLoggedIn: boolean; orderId: string; orderTotal: number }) {
   useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const gtag = (window as any).gtag
-    if (typeof gtag === 'function') {
-      gtag('event', 'conversion', {
+    if (typeof window.gtag === 'function') {
+      window.gtag('event', 'conversion', {
         send_to: process.env.NEXT_PUBLIC_GOOGLE_ADS_ID,
         value: orderTotal,
         currency: 'EUR',
