@@ -313,8 +313,10 @@ function CheckoutInner({ paymentIntentId, grandTotal, shipping, subtotal, discou
 
 function SuccessScreen({ isLoggedIn, orderId, orderTotal }: { isLoggedIn: boolean; orderId: string; orderTotal: number }) {
   useEffect(() => {
-    if (typeof window !== 'undefined' && typeof (window as Window & { gtag?: (...args: unknown[]) => void }).gtag === 'function') {
-      ;(window as Window & { gtag: (...args: unknown[]) => void }).gtag('event', 'conversion', {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const gtag = (window as any).gtag
+    if (typeof gtag === 'function') {
+      gtag('event', 'conversion', {
         send_to: process.env.NEXT_PUBLIC_GOOGLE_ADS_ID,
         value: orderTotal,
         currency: 'EUR',
