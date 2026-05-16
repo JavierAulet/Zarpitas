@@ -18,6 +18,7 @@ interface ProductDetailProps {
 
 export default function ProductDetail({ product, variants = [] }: ProductDetailProps) {
   const [selectedImage, setSelectedImage] = useState(0)
+  const [variantImageOverride, setVariantImageOverride] = useState<string | null>(null)
   const [quantity, setQuantity] = useState(1)
   const [added, setAdded] = useState(false)
 
@@ -27,6 +28,7 @@ export default function ProductDetail({ product, variants = [] }: ProductDetailP
 
   const images = (product.images?.length ? product.images : product.image ? [product.image] : []) as string[]
   const hasImages = images.length > 0
+  const displayImage = variantImageOverride ?? images[selectedImage]
 
   // ── Variant selection ──────────────────────────────────────────────────────
 
@@ -34,16 +36,24 @@ export default function ProductDetail({ product, variants = [] }: ProductDetailP
   const hasPropertyGroups = variants.some((v) => (v.properties?.length ?? 0) > 0)
 
   // Build property groups: { Color: ['Rojo', 'Azul'], Talla: ['S', 'M'] }
-  const propertyGroups = useMemo(() => {
-    if (!hasPropertyGroups) return []
+  // Also collect images per property value
+  const { propertyGroups, propertyImages } = useMemo(() => {
+    if (!hasPropertyGroups) return { propertyGroups: [], propertyImages: {} }
     const groups: Record<string, string[]> = {}
+    const images: Record<string, string> = {} // "PropName:value" → image url
     for (const v of variants) {
       for (const p of v.properties ?? []) {
         if (!groups[p.name]) groups[p.name] = []
         if (!groups[p.name].includes(p.value)) groups[p.name].push(p.value)
+        if (p.image && !images[`${p.name}:${p.value}`]) {
+          images[`${p.name}:${p.value}`] = p.image
+        }
       }
     }
-    return Object.entries(groups).map(([name, values]) => ({ name, values }))
+    return {
+      propertyGroups: Object.entries(groups).map(([name, values]) => ({ name, values })),
+      propertyImages: images,
+    }
   }, [variants, hasPropertyGroups])
 
   // Selected value per property group
@@ -120,16 +130,16 @@ export default function ProductDetail({ product, variants = [] }: ProductDetailP
         <div className="relative aspect-square rounded-4xl overflow-hidden bg-cream-warm border-2 border-cream-deep">
           <AnimatePresence mode="wait">
             <motion.div
-              key={selectedImage}
+              key={displayImage}
               initial={{ opacity: 0, scale: 1.04 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.96 }}
               transition={{ duration: 0.28 }}
               className="relative w-full h-full flex items-center justify-center"
             >
-              {hasImages ? (
+              {displayImage ? (
                 <Image
-                  src={images[selectedImage]}
+                  src={displayImage}
                   alt={product.name}
                   fill
                   priority
@@ -214,40 +224,57 @@ export default function ProductDetail({ product, variants = [] }: ProductDetailP
         </div>
 
         {/* Variant selector — property groups (AliExpress style) */}
-        {hasPropertyGroups && propertyGroups.map((group) => (
-          <div key={group.name} className="mb-4">
-            <p className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">
-              {group.name}:{' '}
-              <span className="text-orange normal-case font-semibold">
-                {selectedProps[group.name] ?? '—'}
-              </span>
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {group.values.map((val) => {
-                const available = isOptionAvailable(group.name, val)
-                const active = selectedProps[group.name] === val
-                return (
-                  <button
-                    key={val}
-                    onClick={() => {
-                      if (!available) return
-                      setSelectedProps((prev) => ({ ...prev, [group.name]: val }))
-                    }}
-                    className={`px-4 py-2 rounded-full text-sm font-bold border-2 transition-all duration-200 ${
-                      active
-                        ? 'border-orange bg-orange text-white'
-                        : !available
-                        ? 'border-cream-deep bg-cream-warm text-text-muted line-through cursor-not-allowed opacity-50'
-                        : 'border-cream-deep bg-white text-text-primary hover:border-orange/50'
-                    }`}
-                  >
-                    {val}
-                  </button>
-                )
-              })}
+        {hasPropertyGroups && propertyGroups.map((group) => {
+          const hasImages = group.values.some((v) => propertyImages[`${group.name}:${v}`])
+          return (
+            <div key={group.name} className="mb-4">
+              <p className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">
+                {group.name}:{' '}
+                <span className="text-orange normal-case font-semibold">
+                  {selectedProps[group.name] ?? '—'}
+                </span>
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {group.values.map((val) => {
+                  const available = isOptionAvailable(group.name, val)
+                  const active = selectedProps[group.name] === val
+                  const img = propertyImages[`${group.name}:${val}`]
+                  return (
+                    <button
+                      key={val}
+                      onClick={() => {
+                        if (!available) return
+                        setSelectedProps((prev) => ({ ...prev, [group.name]: val }))
+                        if (img) setVariantImageOverride(img)
+                        else setVariantImageOverride(null)
+                      }}
+                      title={val}
+                      className={`transition-all duration-200 ${
+                        hasImages && img
+                          ? `w-12 h-12 rounded-xl overflow-hidden border-3 ${
+                              active ? 'border-orange ring-2 ring-orange/30 scale-110' :
+                              !available ? 'opacity-40 cursor-not-allowed grayscale' :
+                              'border-cream-deep hover:border-orange/50'
+                            }`
+                          : `px-4 py-2 rounded-full text-sm font-bold border-2 ${
+                              active ? 'border-orange bg-orange text-white' :
+                              !available ? 'border-cream-deep bg-cream-warm text-text-muted line-through cursor-not-allowed opacity-50' :
+                              'border-cream-deep bg-white text-text-primary hover:border-orange/50'
+                            }`
+                      }`}
+                    >
+                      {hasImages && img ? (
+                        <Image src={img} alt={val} width={48} height={48} className="object-cover w-full h-full" />
+                      ) : (
+                        val
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
 
         {/* Variant selector — flat (manual admin variants) */}
         {!hasPropertyGroups && variants.length > 0 && (

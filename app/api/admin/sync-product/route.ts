@@ -22,6 +22,7 @@ interface SkuProperty {
   sku_property_name?: string
   property_value_definition_name?: string
   sku_property_value?: string
+  sku_image?: string
 }
 
 interface SkuDto {
@@ -62,7 +63,11 @@ function parseVpsResponse(raw: {
       stock: s.sku_available_stock ?? 0,
       properties: (s.ae_sku_property_dtos?.ae_sku_property_d_t_o ?? [])
         .filter((p) => p.sku_property_name && (p.property_value_definition_name ?? p.sku_property_value))
-        .map((p) => ({ name: p.sku_property_name!, value: (p.property_value_definition_name ?? p.sku_property_value)! })),
+        .map((p) => ({
+          name: p.sku_property_name!,
+          value: (p.property_value_definition_name ?? p.sku_property_value)!,
+          ...(p.sku_image ? { image: p.sku_image } : {}),
+        })),
     }))
 
   return { name, images, costPriceEur, stock, description, skus }

@@ -20,6 +20,7 @@ export interface Product {
 export interface VariantProperty {
   name: string
   value: string
+  image?: string
 }
 
 export interface ProductVariant {
