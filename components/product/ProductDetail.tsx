@@ -39,9 +39,10 @@ export default function ProductDetail({ product, variants = [] }: ProductDetailP
   // Also collect images per property value
   const { propertyGroups, propertyImages } = useMemo(() => {
     if (!hasPropertyGroups) return { propertyGroups: [], propertyImages: {} }
+    const sorted = [...variants].sort((a, b) => a.priceModifier - b.priceModifier)
     const groups: Record<string, string[]> = {}
     const images: Record<string, string> = {} // "PropName:value" → image url
-    for (const v of variants) {
+    for (const v of sorted) {
       for (const p of v.properties ?? []) {
         if (!groups[p.name]) groups[p.name] = []
         if (!groups[p.name].includes(p.value)) groups[p.name].push(p.value)
