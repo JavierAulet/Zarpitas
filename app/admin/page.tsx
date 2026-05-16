@@ -190,8 +190,15 @@ export default async function AdminDashboard() {
           {outOfStockProducts.length > 0 && (
             <AlertBanner type="warning">
               <span>
-                <strong>{outOfStockProducts.length} producto{outOfStockProducts.length > 1 ? 's' : ''} sin stock.</strong>{' '}
-                <Link href="/admin/productos" className="underline font-bold">Ver productos →</Link>
+                <strong>{outOfStockProducts.length} sin stock:</strong>{' '}
+                {outOfStockProducts.map((p, i) => (
+                  <span key={p.id}>
+                    <Link href={`/admin/productos/${p.id}`} className="underline font-bold hover:opacity-80">
+                      {p.name.length > 35 ? p.name.slice(0, 35) + '…' : p.name}
+                    </Link>
+                    {i < outOfStockProducts.length - 1 ? ', ' : ''}
+                  </span>
+                ))}
               </span>
             </AlertBanner>
           )}
