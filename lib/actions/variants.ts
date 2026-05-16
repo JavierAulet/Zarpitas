@@ -21,7 +21,7 @@ export async function createVariant(variant: ProductVariantInsert): Promise<void
   revalidatePath(`/productos/${variant.product_id}`)
 }
 
-export async function updateVariant(id: string, variant: Partial<ProductVariantInsert>): Promise<void> {
+export async function updateVariant(id: string, variant: Partial<ProductVariantInsert> & { active?: boolean; display_name?: string | null }): Promise<void> {
   const db = createServiceClient()
   const { error } = await db.from('product_variants').update(variant).eq('id', id)
   if (error) throw new Error(error.message)

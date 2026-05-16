@@ -157,15 +157,17 @@ export default async function ProductoDetailPage({ params }: Props) {
     getProductVariants(params.id).catch(() => []),
   ])
   const reviews = reviewsRes.data ?? []
-  const variants = variantRows.map((v) => ({
-    id: v.id,
-    name: v.name,
-    priceModifier: v.price_modifier,
-    stock: v.stock,
-    aliexpressSkuId: v.sku ?? undefined,
-    sku_attr: (v as { sku_attr?: string }).sku_attr ?? undefined,
-    properties: v.properties ?? undefined,
-  }))
+  const variants = variantRows
+    .filter((v) => v.active !== false)
+    .map((v) => ({
+      id: v.id,
+      name: (v as { display_name?: string }).display_name || v.name,
+      priceModifier: v.price_modifier,
+      stock: v.stock,
+      aliexpressSkuId: v.sku ?? undefined,
+      sku_attr: (v as { sku_attr?: string }).sku_attr ?? undefined,
+      properties: v.properties ?? undefined,
+    }))
 
   if (!product) notFound()
 

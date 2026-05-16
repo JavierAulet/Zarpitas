@@ -2,9 +2,9 @@
 import { useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { Plus, Trash2, Loader2, Upload, X, Star, RefreshCw } from 'lucide-react'
+import { Plus, Trash2, Loader2, Upload, X, Star, RefreshCw, Eye, EyeOff, Pencil, Check } from 'lucide-react'
 import { createProduct, updateProduct } from '@/lib/actions/products'
-import { createVariant, deleteVariant } from '@/lib/actions/variants'
+import { createVariant, deleteVariant, updateVariant } from '@/lib/actions/variants'
 import type { ProductRow, ProductVariantRow } from '@/lib/supabase/types'
 
 type FormMode = 'create' | 'edit'
@@ -159,6 +159,91 @@ function MultiImageUploader({ productId, images, onChange }: MultiImageUploaderP
         className="hidden"
         onChange={(e) => handleFiles(e.target.files)}
       />
+    </div>
+  )
+}
+
+// ─── Variant row ─────────────────────────────────────────────────────────────
+
+function VariantRow({ variant: v, onDelete, onChange }: {
+  variant: ProductVariantRow
+  onDelete: () => void
+  onChange: (updated: Partial<ProductVariantRow>) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [displayName, setDisplayName] = useState((v as ProductVariantRow & { display_name?: string }).display_name ?? '')
+  const [saving, setSaving] = useState(false)
+
+  const isActive = v.active !== false
+
+  async function toggleActive() {
+    const newActive = !isActive
+    onChange({ active: newActive })
+    await updateVariant(v.id, { active: newActive })
+  }
+
+  async function saveDisplayName() {
+    setSaving(true)
+    await updateVariant(v.id, { display_name: displayName || null } as Parameters<typeof updateVariant>[1])
+    onChange({ display_name: displayName || null } as Partial<ProductVariantRow>)
+    setSaving(false)
+    setEditing(false)
+  }
+
+  return (
+    <div className={`flex items-center gap-2 rounded-xl px-3 py-2.5 transition-colors ${isActive ? 'bg-zinc-800' : 'bg-zinc-900 opacity-60'}`}>
+      {/* Active toggle */}
+      <button type="button" onClick={toggleActive} className="text-zinc-500 hover:text-white transition-colors shrink-0" title={isActive ? 'Desactivar' : 'Activar'}>
+        {isActive ? <Eye size={14} /> : <EyeOff size={14} />}
+      </button>
+
+      {/* Names */}
+      <div className="flex-1 min-w-0">
+        {editing ? (
+          <input
+            autoFocus
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') saveDisplayName(); if (e.key === 'Escape') setEditing(false) }}
+            placeholder={v.name}
+            className="w-full bg-zinc-700 text-white text-sm rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-orange/50"
+          />
+        ) : (
+          <div>
+            <span className={`text-sm font-medium ${isActive ? 'text-white' : 'text-zinc-500'}`}>
+              {(v as ProductVariantRow & { display_name?: string }).display_name || v.name}
+            </span>
+            {(v as ProductVariantRow & { display_name?: string }).display_name && (
+              <span className="text-zinc-600 text-xs ml-2 font-mono truncate">({v.name})</span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Price modifier */}
+      {v.price_modifier !== 0 && (
+        <span className={`text-xs font-mono shrink-0 ${v.price_modifier > 80 ? 'text-red-400' : 'text-orange'}`}>
+          {v.price_modifier > 0 ? '+' : ''}{v.price_modifier.toFixed(2)}€
+        </span>
+      )}
+
+      <span className="text-zinc-500 text-xs w-12 text-right shrink-0">{v.stock} uds.</span>
+
+      {/* Edit name */}
+      <button
+        type="button"
+        onClick={editing ? saveDisplayName : () => setEditing(true)}
+        disabled={saving}
+        className="p-1.5 rounded-lg text-zinc-600 hover:text-blue-400 hover:bg-blue-500/10 transition-colors shrink-0"
+        title="Renombrar para la tienda"
+      >
+        {saving ? <Loader2 size={13} className="animate-spin" /> : editing ? <Check size={13} /> : <Pencil size={13} />}
+      </button>
+
+      {/* Delete */}
+      <button type="button" onClick={onDelete} className="p-1.5 rounded-lg text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0">
+        <Trash2 size={13} />
+      </button>
     </div>
   )
 }
@@ -369,24 +454,12 @@ export default function ProductForm({ mode, product, variants: initialVariants =
             {variants.length > 0 && (
               <div className="space-y-2">
                 {variants.map((v) => (
-                  <div key={v.id} className="flex items-center gap-3 bg-zinc-800 rounded-xl px-3 py-2.5">
-                    <span className="flex-1 text-white text-sm font-medium">{v.name}</span>
-                    {v.price_modifier !== 0 && (
-                      <span className="text-orange text-xs font-mono">
-                        {v.price_modifier > 0 ? '+' : ''}{v.price_modifier.toFixed(2)}€
-                      </span>
-                    )}
-                    <span className="text-zinc-500 text-xs w-14 text-right">
-                      {v.stock} uds.
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteVariant(v.id)}
-                      className="p-1.5 rounded-lg text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-colors flex-shrink-0"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
+                  <VariantRow
+                    key={v.id}
+                    variant={v}
+                    onDelete={() => handleDeleteVariant(v.id)}
+                    onChange={(updated) => setVariants((prev) => prev.map((x) => x.id === v.id ? { ...x, ...updated } : x))}
+                  />
                 ))}
               </div>
             )}
