@@ -218,8 +218,8 @@ function CheckoutInner({ paymentIntentId, grandTotal, shipping, subtotal, discou
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className={labelClass}>Ciudad</label>
-                <input {...register('city', { required: true })} placeholder="Madrid" className={inputClass} />
+                <label className={labelClass}>Localidad / Municipio</label>
+                <input {...register('city', { required: true })} placeholder="Vinaròs, Benidorm, Torrevieja..." className={inputClass} />
               </div>
               <div>
                 <label className={labelClass}>Código postal</label>
