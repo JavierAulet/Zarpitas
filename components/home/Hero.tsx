@@ -28,7 +28,7 @@ export default function Hero() {
   return (
     <section className="relative min-h-screen bg-cream overflow-hidden flex items-center pt-20">
       {/* Decorative blobs */}
-      <div className="absolute top-16 right-0 w-[280px] h-[280px] sm:w-[600px] sm:h-[600px] bg-orange-50 rounded-full -translate-y-1/4 translate-x-1/4 pointer-events-none" />
+      <div className="absolute top-32 right-0 w-[200px] h-[200px] sm:w-[600px] sm:h-[600px] bg-orange-50 rounded-full translate-x-1/3 pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-48 h-48 sm:w-96 sm:h-96 bg-green-50 rounded-full translate-y-1/3 -translate-x-1/3 pointer-events-none" />
 
 

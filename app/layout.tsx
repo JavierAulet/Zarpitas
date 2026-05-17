@@ -59,7 +59,7 @@ export const metadata: Metadata = {
       'Productos premium para mascotas en España. Collar GPS, camas ortopédicas, comederos inteligentes y más. Envío gratuito, devolución gratis 30 días.',
     images: [
       {
-        url: '/images/hero.jpg',
+        url: '/images/category-cats.jpg',
         width: 1200,
         height: 630,
         alt: 'Zarpitas.es — Tienda Premium para Mascotas en España',
@@ -72,7 +72,7 @@ export const metadata: Metadata = {
     creator: '@zarpitas_es',
     title: 'Zarpitas.es — Todo el amor que merece tu mejor amigo',
     description: 'Productos premium para mascotas en España. Envío gratuito, devolución gratis.',
-    images: ['/images/hero.jpg'],
+    images: ['/images/category-cats.jpg'],
   },
   alternates: {
     canonical: BASE_URL,

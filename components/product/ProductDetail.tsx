@@ -156,13 +156,13 @@ export default function ProductDetail({ product, variants = [] }: ProductDetailP
           {images.length > 1 && (
             <>
               <button
-                onClick={() => setSelectedImage((i) => (i - 1 + images.length) % images.length)}
+                onClick={() => { setVariantImageOverride(null); setSelectedImage((i) => (i - 1 + images.length) % images.length) }}
                 className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-2xl bg-white/90 backdrop-blur-sm shadow-warm flex items-center justify-center text-text-secondary hover:text-text-primary transition-colors"
               >
                 <ChevronLeft size={18} />
               </button>
               <button
-                onClick={() => setSelectedImage((i) => (i + 1) % images.length)}
+                onClick={() => { setVariantImageOverride(null); setSelectedImage((i) => (i + 1) % images.length) }}
                 className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-2xl bg-white/90 backdrop-blur-sm shadow-warm flex items-center justify-center text-text-secondary hover:text-text-primary transition-colors"
               >
                 <ChevronRight size={18} />
@@ -176,7 +176,7 @@ export default function ProductDetail({ product, variants = [] }: ProductDetailP
             {images.map((img, i) => (
               <button
                 key={i}
-                onClick={() => setSelectedImage(i)}
+                onClick={() => { setVariantImageOverride(null); setSelectedImage(i) }}
                 className={`relative w-14 h-14 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border-2 transition-all ${
                   selectedImage === i ? 'border-orange shadow-orange/30 shadow-md' : 'border-cream-deep hover:border-sand'
                 }`}
