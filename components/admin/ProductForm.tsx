@@ -1,8 +1,8 @@
 'use client'
-import { useState, useTransition, useRef } from 'react'
+import { useState, useTransition, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
-import { Plus, Trash2, Loader2, Upload, X, Star, RefreshCw, Eye, EyeOff, Pencil, Check } from 'lucide-react'
+
+import { Plus, Trash2, Loader2, Upload, X, Star, RefreshCw, Eye, EyeOff, Pencil, Check, GripVertical } from 'lucide-react'
 import { createProduct, updateProduct } from '@/lib/actions/products'
 import { createVariant, deleteVariant, updateVariant } from '@/lib/actions/variants'
 import type { ProductRow, ProductVariantRow } from '@/lib/supabase/types'
@@ -40,6 +40,16 @@ function MultiImageUploader({ productId, images, onChange }: MultiImageUploaderP
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const dragIdx = useRef<number | null>(null)
+  const [dragOver, setDragOver] = useState<number | null>(null)
+
+  const moveImage = useCallback((from: number, to: number) => {
+    if (from === to) return
+    const arr = [...images]
+    const [item] = arr.splice(from, 1)
+    arr.splice(to, 0, item)
+    onChange(arr)
+  }, [images, onChange])
 
   async function handleFiles(files: FileList | null) {
     if (!files || files.length === 0) return
@@ -81,18 +91,39 @@ function MultiImageUploader({ productId, images, onChange }: MultiImageUploaderP
       {images.length > 0 && (
         <div className="grid grid-cols-3 gap-2">
           {images.map((url, i) => (
-            <div key={url + i} className="relative group aspect-square rounded-xl overflow-hidden bg-zinc-800 border border-zinc-700">
-              <Image src={url} alt="" fill sizes="120px" className="object-cover" unoptimized />
+            <div
+              key={url + i}
+              draggable
+              onDragStart={(e) => {
+                dragIdx.current = i
+                e.dataTransfer.effectAllowed = 'move'
+                e.dataTransfer.setData('text/plain', String(i))
+              }}
+              onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOver(i) }}
+              onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOver(null) }}
+              onDrop={(e) => { e.preventDefault(); setDragOver(null); if (dragIdx.current !== null && dragIdx.current !== i) moveImage(dragIdx.current, i) }}
+              onDragEnd={() => { dragIdx.current = null; setDragOver(null) }}
+              className={`relative group aspect-square rounded-xl overflow-hidden bg-zinc-800 border-2 cursor-grab active:cursor-grabbing transition-all select-none ${
+                dragOver === i ? 'border-orange ring-2 ring-orange/40 scale-95 opacity-70' : 'border-zinc-700'
+              }`}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={url} alt="" draggable={false} className="absolute inset-0 w-full h-full object-cover pointer-events-none" />
 
               {/* Main badge */}
               {i === 0 && (
-                <div className="absolute top-1.5 left-1.5 bg-orange text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                <div className="absolute top-1.5 left-1.5 bg-orange text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-1 pointer-events-none">
                   <Star size={8} fill="white" /> Principal
                 </div>
               )}
 
+              {/* Drag handle */}
+              <div className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 rounded-lg p-0.5 pointer-events-none">
+                <GripVertical size={12} className="text-white" />
+              </div>
+
               {/* Hover actions */}
-              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center gap-1.5 pb-2">
                 {i !== 0 && (
                   <button
                     type="button"
